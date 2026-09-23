@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlueCycle — Smart Pond Monitoring &amp; Automatic Water Quality Management System</title>
+<meta name="description" content="BlueCycle is an IoT-based smart pond management system that continuously monitors pH, temperature, turbidity and water level while automatically controlling pumps and feeding through ESP32.">
+
+<!--
+  ============================================================================
+  BLUECYCLE — SMART POND MONITORING & AUTOMATIC WATER QUALITY MANAGEMENT SYSTEM
+  ============================================================================
+  Single-file project showcase website.
+  Built for: Group 2, Dept. of CSE, United International University
+  Structure of this document:
+    1. <style>  — design tokens, layout, components, animations
+    2. <body>   — loading screen, nav, hero, content sections, footer
+    3. <script> — interactions: theme toggle, reveal-on-scroll, counters,
+                   live-dashboard simulation, smooth scroll, cursor glow
+  No external stylesheets or scripts are used — everything lives in this file.
+  ============================================================================
+-->
+
+<style>
+  /* ==========================================================================
+     1. DESIGN TOKENS
+     Palette:  Primary #0B3D91 (deep pond-water navy)
+               Secondary #00AEEF (surface-light cyan)
+               Accent #00C896 (healthy aquatic teal-green)
+     Type:     Space Grotesk (display) / Inter (body) / JetBrains Mono (data)
+  ========================================================================== */
+  :root{
+    /* --- brand colors --- */
+    --primary:#0B3D91;
+    --primary-dark:#082a68;
+    --primary-light:#1a56c4;
+    --secondary:#00AEEF;
+    --accent:#00C896;
+    --accent-dark:#00a97e;
+
+    /* --- surface / background (light mode) --- */
+    --bg:#F4FAFF;
+    --bg-alt:#EAF5FF;
+    --surface:#ffffff;
+    --glass-bg:rgba(255,255,255,0.62);
+    --glass-border:rgba(255,255,255,0.65);
+    --glass-shadow:0 20px 60px -20px rgba(11,61,145,0.25);
+
+    /* --- text --- */
+    --ink:#0A1B33;
+    --ink-soft:#3E4E68;
+    --ink-faint:#7285A3;
+    --on-primary:#F4FAFF;
+
+    /* --- gradients --- */
+    --grad-primary:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);
+    --grad-accent:linear-gradient(135deg,var(--secondary) 0%,var(--accent) 100%);
+    --grad-bg:radial-gradient(circle at 15% 10%, rgba(0,174,239,0.16), transparent 45%),
+              radial-gradient(circle at 85% 0%, rgba(0,200,150,0.14), transparent 40%),
+              radial-gradient(circle at 50% 100%, rgba(11,61,145,0.10), transparent 50%),
+              var(--bg);
+
+    /* --- layout --- */
+    --radius-sm:12px;
+    --radius:20px;
+    --radius-lg:28px;
+    --radius-pill:999px;
+    --maxw:1280px;
+    --nav-h:76px;
+
+    /* --- fonts --- */
+    --font-display:'Space Grotesk','Avenir Next','Century Gothic','Segoe UI',sans-serif;
+    --font-body:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;
+
+    /* --- motion --- */
+    --ease:cubic-bezier(.16,1,.3,1);
+    --ease-soft:cubic-bezier(.4,0,.2,1);
+  }
+
+  html[data-theme="dark"]{
+    --bg:#050B18;
+    --bg-alt:#081026;
+    --surface:#0B1730;
+    --glass-bg:rgba(13,28,58,0.55);
+    --glass-border:rgba(0,174,239,0.22);
+    --glass-shadow:0 20px 60px -20px rgba(0,0,0,0.6);
+    --ink:#EAF3FF;
+    --ink-soft:#AEC1E0;
+    --ink-faint:#6E82A8;
+    --grad-bg:radial-gradient(circle at 15% 10%, rgba(0,174,239,0.16), transparent 45%),
+              radial-gradient(circle at 85% 0%, rgba(0,200,150,0.14), transparent 40%),
+              radial-gradient(circle at 50% 100%, rgba(11,61,145,0.30), transparent 50%),
+              var(--bg);
+  }
+
+  /* ==========================================================================
+     2. RESET
+  ========================================================================== */
+  *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    font-family:var(--font-body);
+    background:var(--grad-bg);
+    color:var(--ink);
+    line-height:1.6;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    transition:background .4s var(--ease-soft), color .4s var(--ease-soft);
+  }
+  img,svg{ display:block; max-width:100%; }
+  a{ color:inherit; text-decoration:none; }
+  ul{ list-style:none; }
+  button{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+  input,select{ font-family:inherit; }
+  h1,h2,h3,h4{ font-family:var(--font-display); font-weight:600; letter-spacing:-0.02em; color:var(--ink); }
+
+  ::selection{ background:var(--accent); color:#fff; }
+
+  /* premium scrollbar */
+  ::-webkit-scrollbar{ width:11px; }
+  ::-webkit-scrollbar-track{ background:var(--bg-alt); }
+  ::-webkit-scrollbar-thumb{ background:var(--grad-primary); border-radius:99px; border:3px solid var(--bg-alt); }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--grad-accent); }
+
+  :focus-visible{ outline:2.5px solid var(--secondary); outline-offset:3px; border-radius:4px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
+
+  /* ==========================================================================
+     3. LAYOUT UTILITIES
+  ========================================================================== */
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 32px; }
+  .section{ position:relative; padding:140px 0; }
+  .section-tight{ padding:100px 0; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--primary); background:rgba(0,174,239,0.1); border:1px solid rgba(0,174,239,0.25);
+    padding:7px 16px; border-radius:var(--radius-pill); margin-bottom:22px; font-weight:600;
+  }
+  html[data-theme="dark"] .eyebrow{ color:var(--secondary); background:rgba(0,174,239,0.12); }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(0,200,150,0.25); }
+
+  .head-block{ max-width:680px; margin-bottom:64px; }
+  .head-block.center{ margin-left:auto; margin-right:auto; text-align:center; }
+  .head-block h2{ font-size:clamp(2rem,4vw,3rem); line-height:1.12; margin-bottom:18px; }
+  .head-block p{ color:var(--ink-soft); font-size:1.08rem; }
+
+  .grad-text{
+    background:var(--grad-primary); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:10px;
+    font-family:var(--font-body); font-weight:600; font-size:0.95rem;
+    padding:15px 30px; border-radius:var(--radius-pill);
+    cursor:pointer; position:relative; overflow:hidden; isolation:isolate;
+    transition:transform .35s var(--ease), box-shadow .35s var(--ease), background .35s var(--ease), color .35s var(--ease), border-color .35s var(--ease);
+    white-space:nowrap;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn-primary{ background:var(--grad-primary); color:#fff; box-shadow:0 14px 30px -10px rgba(11,61,145,0.55); }
+  .btn-primary:hover{ transform:translateY(-3px); box-shadow:0 20px 40px -12px rgba(11,61,145,0.6); }
+  .btn-accent{ background:var(--grad-accent); color:#04241c; box-shadow:0 14px 30px -10px rgba(0,200,150,0.5); }
+  .btn-accent:hover{ transform:translateY(-3px); box-shadow:0 20px 40px -12px rgba(0,200,150,0.55); }
+  .btn-ghost{
+    background:var(--glass-bg); color:var(--ink); border:1.5px solid var(--glass-border);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+  .btn-ghost:hover{ transform:translateY(-3px); border-color:var(--secondary); box-shadow:0 14px 30px -14px rgba(11,61,145,0.35); }
+  .btn-sm{ padding:11px 22px; font-size:0.86rem; }
+  .btn-disabled{ opacity:0.55; cursor:not-allowed; }
+  .btn-disabled:hover{ transform:none; }
+  .btn .ripple{ position:absolute; border-radius:50%; background:rgba(255,255,255,0.55); transform:scale(0); animation:ripple .6s var(--ease-soft); pointer-events:none; }
+  @keyframes ripple{ to{ transform:scale(3.2); opacity:0; } }
+
+  /* glass card */
+  .glass{
+    background:var(--glass-bg); border:1px solid var(--glass-border);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-radius:var(--radius-lg); box-shadow:var(--glass-shadow);
+  }
+
+  /* reveal on scroll */
+  .reveal{ opacity:0; transform:translateY(36px); transition:opacity .9s var(--ease), transform .9s var(--ease); }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+  .reveal-stagger > *{ transition-delay:calc(var(--i,0) * 90ms); }
+
+  /* badges / pills */
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:600;
+    padding:5px 13px; border-radius:var(--radius-pill); font-family:var(--font-mono); letter-spacing:0.03em;
+  }
+  .pill-ok{ background:rgba(0,200,150,0.14); color:var(--accent-dark); }
+  html[data-theme="dark"] .pill-ok{ color:#4CE8BC; }
+  .pill-info{ background:rgba(0,174,239,0.14); color:#0089bf; }
+  html[data-theme="dark"] .pill-info{ color:var(--secondary); }
+  .pill-warn{ background:rgba(255,150,60,0.15); color:#c1670c; }
+
+  /* ==========================================================================
+     4. LOADING SCREEN
+  ========================================================================== */
+  #loader{
+    position:fixed; inset:0; z-index:9999; background:var(--primary);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    transition:opacity .7s var(--ease-soft), visibility .7s var(--ease-soft);
+  }
+  #loader.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  .loader-ring{ width:64px; height:64px; position:relative; }
+  .loader-ring::before,.loader-ring::after{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    border:3px solid transparent; border-top-color:var(--secondary); border-right-color:var(--accent);
+    animation:spin 1.1s linear infinite;
+  }
+  .loader-ring::after{ inset:10px; border-top-color:var(--accent); border-right-color:transparent; border-left-color:var(--secondary); animation-duration:.8s; animation-direction:reverse; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .loader-word{ font-family:var(--font-mono); color:#cfe9ff; letter-spacing:0.3em; font-size:12px; text-transform:uppercase; }
+  .loader-title{ font-family:var(--font-display); color:#fff; font-size:1.4rem; letter-spacing:0.02em; }
+
+  /* ==========================================================================
+     5. SCROLL PROGRESS + CURSOR GLOW + BACK TO TOP
+  ========================================================================== */
+  #scroll-progress{
+    position:fixed; top:0; left:0; height:3px; width:0%; z-index:2000;
+    background:var(--grad-accent); box-shadow:0 0 12px rgba(0,200,150,0.6);
+    transition:width .1s linear;
+  }
+  #cursor-glow{
+    position:fixed; width:420px; height:420px; border-radius:50%; pointer-events:none; z-index:1;
+    background:radial-gradient(circle, rgba(0,174,239,0.14), transparent 70%);
+    transform:translate(-50%,-50%); left:50%; top:50%; transition:opacity .4s ease; opacity:0;
+  }
+  @media(hover:hover){ #cursor-glow{ opacity:1; } }
+
+  #back-to-top{
+    position:fixed; right:26px; bottom:26px; z-index:900; width:52px; height:52px; border-radius:50%;
+    background:var(--grad-primary); color:#fff; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 14px 30px -10px rgba(11,61,145,0.55); opacity:0; transform:translateY(16px) scale(.8); pointer-events:none;
+    transition:opacity .4s var(--ease), transform .4s var(--ease);
+  }
+  #back-to-top.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  #back-to-top:hover{ transform:translateY(-4px) scale(1.05); }
+
+  /* ==========================================================================
+     6. NAVBAR
+  ========================================================================== */
+  #navbar{
+    position:fixed; top:0; left:0; right:0; z-index:1000; height:var(--nav-h);
+    display:flex; align-items:center; transition:background .4s var(--ease-soft), box-shadow .4s var(--ease-soft), height .3s var(--ease-soft);
+  }
+  #navbar.scrolled{
+    background:var(--glass-bg); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 8px 30px -14px rgba(11,61,145,0.25); border-bottom:1px solid var(--glass-border); height:66px;
+  }
+  .nav-inner{ width:100%; max-width:var(--maxw); margin:0 auto; padding:0 32px; display:flex; align-items:center; justify-content:space-between; }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:700; font-size:1.28rem; }
+  .brand-mark{ width:36px; height:36px; border-radius:11px; background:var(--grad-primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -6px rgba(11,61,145,0.5); }
+  .brand-mark svg{ width:20px; height:20px; }
+  .nav-links{ display:flex; align-items:center; gap:2px; }
+  .nav-links a{
+    font-size:0.9rem; font-weight:500; color:var(--ink-soft); padding:10px 15px; border-radius:var(--radius-pill);
+    transition:color .3s ease, background .3s ease; position:relative;
+  }
+  .nav-links a:hover{ color:var(--primary); background:rgba(0,174,239,0.09); }
+  html[data-theme="dark"] .nav-links a:hover{ color:var(--secondary); }
+  .nav-actions{ display:flex; align-items:center; gap:12px; }
+  .icon-btn{
+    width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:var(--glass-bg); border:1px solid var(--glass-border); transition:transform .3s var(--ease), border-color .3s ease;
+  }
+  .icon-btn:hover{ transform:translateY(-2px) rotate(-6deg); border-color:var(--secondary); }
+  .icon-btn svg{ width:18px; height:18px; }
+  .theme-icon-dark{ display:none; }
+  html[data-theme="dark"] .theme-icon-light{ display:none; }
+  html[data-theme="dark"] .theme-icon-dark{ display:block; }
+  #nav-toggle{ display:none; }
+
+  /* ==========================================================================
+     7. HERO
+  ========================================================================== */
+  #hero{
+    position:relative; min-height:100vh; display:flex; align-items:center; overflow:hidden;
+    padding-top:var(--nav-h);
+  }
+  .hero-bg{ position:absolute; inset:0; z-index:0; overflow:hidden; }
+  .blob{ position:absolute; border-radius:50%; filter:blur(70px); opacity:0.55; animation:float-blob 16s ease-in-out infinite; }
+  .blob-1{ width:520px; height:520px; background:radial-gradient(circle,var(--secondary),transparent 70%); top:-160px; left:-120px; animation-duration:18s; }
+  .blob-2{ width:460px; height:460px; background:radial-gradient(circle,var(--accent),transparent 70%); bottom:-140px; right:-100px; animation-duration:22s; animation-delay:-4s; }
+  .blob-3{ width:340px; height:340px; background:radial-gradient(circle,var(--primary),transparent 70%); top:40%; right:8%; opacity:0.35; animation-duration:14s; animation-delay:-8s; }
+  @keyframes float-blob{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    33%{ transform:translate(40px,-30px) scale(1.08); }
+    66%{ transform:translate(-30px,25px) scale(0.95); }
+  }
+
+  .hero-grid-lines{
+    position:absolute; inset:0; opacity:0.5;
+    background-image:linear-gradient(rgba(11,61,145,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(11,61,145,0.05) 1px,transparent 1px);
+    background-size:46px 46px; mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 90%);
+  }
+  html[data-theme="dark"] .hero-grid-lines{
+    background-image:linear-gradient(rgba(0,174,239,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(0,174,239,0.08) 1px,transparent 1px);
+  }
+
+  /* particle bubbles rising through hero */
+  .bubble{
+    position:absolute; bottom:-40px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(0,174,239,0.15));
+    border:1px solid rgba(255,255,255,0.5);
+    animation:rise linear infinite;
+  }
+  @keyframes rise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:0.7; }
+    90%{ opacity:0.5; }
+    100%{ transform:translateY(-115vh) translateX(20px); opacity:0; }
+  }
+
+  /* node network overlay - IoT signature motif */
+  .node-net{ position:absolute; inset:0; z-index:0; opacity:0.55; }
+  .node-net circle{ animation:pulse-node 3.2s ease-in-out infinite; }
+  @keyframes pulse-node{ 0%,100%{ opacity:0.35; r:2.4; } 50%{ opacity:1; r:4; } }
+  .node-net line{ stroke-dasharray:5 7; animation:dash-move 6s linear infinite; }
+  @keyframes dash-move{ to{ stroke-dashoffset:-120; } }
+
+  /* wave layers at hero base */
+  .wave-wrap{ position:absolute; left:0; right:0; bottom:0; height:220px; z-index:1; }
+  .wave-wrap svg{ position:absolute; bottom:0; width:200%; height:100%; }
+  .wave-1{ animation:wave-move 13s linear infinite; opacity:0.5; }
+  .wave-2{ animation:wave-move 19s linear infinite reverse; opacity:0.65; }
+  .wave-3{ animation:wave-move 25s linear infinite; opacity:0.9; }
+  @keyframes wave-move{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  .hero-inner{ position:relative; z-index:2; width:100%; text-align:center; padding:60px 0 40px; }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:9px; font-family:var(--font-mono); font-size:12.5px;
+    letter-spacing:0.12em; text-transform:uppercase; color:var(--primary); background:var(--glass-bg);
+    border:1px solid var(--glass-border); padding:9px 18px 9px 10px; border-radius:var(--radius-pill);
+    backdrop-filter:blur(12px); margin-bottom:30px; box-shadow:var(--glass-shadow);
+  }
+  html[data-theme="dark"] .hero-badge{ color:var(--secondary); }
+  .hero-badge .flag{ background:var(--grad-accent); color:#04241c; padding:3px 9px; border-radius:99px; font-weight:700; letter-spacing:0.04em; }
+
+  .hero-title{
+    font-size:clamp(3.4rem,9vw,7.2rem); line-height:0.95; font-weight:700; letter-spacing:-0.03em;
+    background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 55%,var(--accent) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:26px; animation:title-in 1.1s var(--ease) both;
+  }
+  @keyframes title-in{ from{ opacity:0; transform:translateY(28px) scale(.97); } to{ opacity:1; transform:translateY(0) scale(1); } }
+
+  .hero-sub{
+    max-width:640px; margin:0 auto 42px; font-size:1.2rem; color:var(--ink-soft); font-weight:500;
+    animation:title-in 1.1s var(--ease) .1s both;
+  }
+  .hero-actions{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom:70px; animation:title-in 1.1s var(--ease) .2s both; }
+
+  .hero-stats{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px; max-width:920px; margin:0 auto;
+    background:var(--glass-border); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--glass-border);
+    animation:title-in 1.1s var(--ease) .3s both; box-shadow:var(--glass-shadow);
+  }
+  .stat-cell{ background:var(--glass-bg); backdrop-filter:blur(18px); padding:26px 12px; text-align:center; }
+  .stat-num{ font-family:var(--font-display); font-size:clamp(1.5rem,3vw,2.1rem); font-weight:700; color:var(--primary); }
+  html[data-theme="dark"] .stat-num{ color:var(--secondary); }
+  .stat-label{ font-size:0.78rem; color:var(--ink-faint); margin-top:4px; font-weight:600; letter-spacing:0.02em; }
+
+  .telemetry-bar{
+    margin:34px auto 0; max-width:920px; overflow:hidden; border-radius:var(--radius-pill);
+    background:var(--glass-bg); border:1px solid var(--glass-border); padding:11px 0;
+    animation:title-in 1.1s var(--ease) .4s both;
+  }
+  .telemetry-track{ display:flex; gap:40px; white-space:nowrap; animation:marquee 22s linear infinite; width:max-content; }
+  @keyframes marquee{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .telemetry-track span{ font-family:var(--font-mono); font-size:0.82rem; color:var(--ink-soft); display:inline-flex; align-items:center; gap:8px; }
+  .telemetry-track b{ color:var(--accent-dark); }
+  html[data-theme="dark"] .telemetry-track b{ color:var(--accent); }
+
+  .scroll-cue{
+    position:absolute; left:50%; bottom:26px; transform:translateX(-50%); z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--ink-faint);
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+    animation:bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translate(-50%,0); } 50%{ transform:translate(-50%,8px); } }
+  .scroll-cue .mouse{ width:24px; height:38px; border:2px solid var(--ink-faint); border-radius:14px; position:relative; }
+  .scroll-cue .mouse::before{ content:''; position:absolute; top:6px; left:50%; width:4px; height:8px; background:var(--secondary); border-radius:3px; transform:translateX(-50%); animation:wheel 1.6s ease-in-out infinite; }
+  @keyframes wheel{ 0%{ opacity:1; top:6px; } 100%{ opacity:0; top:18px; } }
+
+  /* ==========================================================================
+     8. ABOUT / PROJECT IDEA
+  ========================================================================== */
+  .about-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:64px; align-items:center; }
+  .about-copy p{ color:var(--ink-soft); margin-bottom:16px; font-size:1.04rem; }
+  .about-copy p strong{ color:var(--ink); }
+  .about-list{ margin-top:26px; display:flex; flex-direction:column; gap:14px; }
+  .about-list li{ display:flex; gap:12px; align-items:flex-start; color:var(--ink-soft); font-size:0.98rem; }
+  .about-list .tick{
+    flex:none; width:22px; height:22px; border-radius:50%; background:var(--grad-accent);
+    display:flex; align-items:center; justify-content:center; margin-top:2px;
+  }
+  .about-list .tick svg{ width:12px; height:12px; }
+
+  .pond-illustration{ position:relative; aspect-ratio:1/1; border-radius:var(--radius-lg); overflow:hidden; }
+  .pond-illustration svg{ width:100%; height:100%; }
+
+  .quote-block{
+    margin-top:100px; padding:56px; border-radius:var(--radius-lg); position:relative; text-align:center;
+    background:var(--grad-primary); color:#fff; overflow:hidden;
+  }
+  .quote-block::before{
+    content:''; position:absolute; inset:0; opacity:0.5;
+    background:radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 45%), radial-gradient(circle at 80% 90%, rgba(255,255,255,0.1), transparent 40%);
+  }
+  .quote-block p{ position:relative; font-family:var(--font-display); font-size:clamp(1.3rem,2.6vw,1.8rem); line-height:1.5; max-width:840px; margin:0 auto; font-weight:500; }
+  .quote-block .quote-mark{ position:relative; font-family:var(--font-display); font-size:4rem; opacity:0.4; line-height:0.5; display:block; margin-bottom:18px; }
+
+  /* ==========================================================================
+     9. PROBLEM / OBJECTIVES CARDS
+  ========================================================================== */
+  .problem-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:22px; }
+  .problem-card{
+    padding:30px 24px; transition:transform .4s var(--ease), box-shadow .4s var(--ease);
+  }
+  .problem-card:hover{ transform:translateY(-6px); }
+  .problem-card .num{ font-family:var(--font-mono); font-size:0.78rem; color:var(--ink-faint); letter-spacing:0.1em; }
+  .problem-card .picon{
+    width:50px; height:50px; border-radius:14px; background:rgba(11,61,145,0.08); display:flex; align-items:center; justify-content:center;
+    margin:14px 0 16px;
+  }
+  html[data-theme="dark"] .problem-card .picon{ background:rgba(0,174,239,0.14); }
+  .problem-card .picon svg{ width:24px; height:24px; color:var(--primary); }
+  html[data-theme="dark"] .problem-card .picon svg{ color:var(--secondary); }
+  .problem-card h3{ font-size:1.08rem; margin-bottom:8px; }
+  .problem-card p{ color:var(--ink-soft); font-size:0.92rem; }
+
+  .objectives-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .obj-card{ padding:28px 22px; display:flex; flex-direction:column; gap:14px; transition:transform .4s var(--ease); }
+  .obj-card:hover{ transform:translateY(-6px); border-color:var(--secondary); }
+  .obj-check{
+    width:38px; height:38px; border-radius:50%; background:var(--grad-accent); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -6px rgba(0,200,150,0.5);
+  }
+  .obj-check svg{ width:18px; height:18px; color:#04241c; }
+  .obj-card h4{ font-size:1rem; }
+  .obj-card p{ font-size:0.85rem; color:var(--ink-soft); }
+
+  /* ==========================================================================
+     10. NOVELTY + FEATURES-AT-A-GLANCE GRID
+  ========================================================================== */
+  .novelty-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .novelty-card{
+    padding:34px 28px; position:relative; overflow:hidden; transition:transform .45s var(--ease), box-shadow .45s var(--ease);
+  }
+  .novelty-card::after{
+    content:''; position:absolute; top:-40%; right:-40%; width:70%; height:70%; border-radius:50%;
+    background:var(--grad-accent); opacity:0; filter:blur(40px); transition:opacity .5s ease;
+  }
+  .novelty-card:hover{ transform:translateY(-8px); }
+  .novelty-card:hover::after{ opacity:0.22; }
+  .novelty-icon{
+    width:56px; height:56px; border-radius:16px; background:var(--grad-primary); display:flex; align-items:center; justify-content:center;
+    margin-bottom:22px; box-shadow:0 12px 24px -8px rgba(11,61,145,0.5); position:relative; z-index:1;
+  }
+  .novelty-icon svg{ width:26px; height:26px; color:#fff; }
+  .novelty-card h3{ font-size:1.15rem; margin-bottom:10px; position:relative; z-index:1; }
+  .novelty-card p{ color:var(--ink-soft); font-size:0.92rem; position:relative; z-index:1; }
+
+  .glance-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .glance-card{
+    padding:24px 20px; display:flex; flex-direction:column; gap:14px; transition:transform .4s var(--ease), border-color .4s ease;
+  }
+  .glance-card:hover{ transform:translateY(-5px) scale(1.015); border-color:var(--secondary); }
+  .glance-photo{
+    aspect-ratio:16/10; border-radius:var(--radius-sm); position:relative; overflow:hidden;
+    background:linear-gradient(135deg,rgba(11,61,145,0.10),rgba(0,174,239,0.14));
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px;
+  }
+  html[data-theme="dark"] .glance-photo{ background:linear-gradient(135deg,rgba(11,61,145,0.28),rgba(0,174,239,0.16)); }
+  .glance-photo svg{ width:26px; height:26px; color:var(--secondary); opacity:0.8; }
+  .glance-photo span{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-faint); }
+  .glance-card h4{ font-size:0.95rem; }
+  .glance-card p{ font-size:0.8rem; color:var(--ink-soft); }
+
+  /* ==========================================================================
+     11. FEATURE DETAIL — ALTERNATING SECTIONS
+  ========================================================================== */
+  .feature-detail{ display:grid; grid-template-columns:1fr 1fr; gap:70px; align-items:center; padding:64px 0; border-bottom:1px solid var(--glass-border); }
+  .feature-detail:last-child{ border-bottom:none; }
+  .feature-detail.reverse{ direction:rtl; }
+  .feature-detail.reverse > *{ direction:ltr; }
+  .fd-visual{
+    aspect-ratio:4/3.1; border-radius:var(--radius-lg); position:relative; overflow:hidden;
+    background:linear-gradient(150deg, rgba(11,61,145,0.08), rgba(0,174,239,0.12));
+    display:flex; align-items:center; justify-content:center;
+  }
+  html[data-theme="dark"] .fd-visual{ background:linear-gradient(150deg, rgba(11,61,145,0.35), rgba(0,174,239,0.14)); }
+  .fd-visual .fd-tag{
+    position:absolute; top:18px; left:18px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.1em;
+    text-transform:uppercase; background:var(--glass-bg); border:1px solid var(--glass-border); padding:6px 12px; border-radius:99px; color:var(--ink-soft);
+  }
+  .fd-index{ position:absolute; bottom:14px; right:20px; font-family:var(--font-display); font-size:5rem; font-weight:700; color:rgba(11,61,145,0.09); }
+  html[data-theme="dark"] .fd-index{ color:rgba(0,174,239,0.12); }
+  .fd-copy .eyebrow{ margin-bottom:14px; }
+  .fd-copy h3{ font-size:clamp(1.5rem,2.6vw,2rem); margin-bottom:16px; }
+  .fd-copy > p{ color:var(--ink-soft); margin-bottom:24px; }
+  .fd-subblock{ display:flex; gap:14px; padding:16px 0; border-top:1px solid var(--glass-border); }
+  .fd-subblock .fd-ico{ flex:none; width:34px; height:34px; border-radius:10px; background:rgba(0,174,239,0.12); display:flex; align-items:center; justify-content:center; }
+  .fd-subblock .fd-ico svg{ width:16px; height:16px; color:var(--primary); }
+  html[data-theme="dark"] .fd-subblock .fd-ico svg{ color:var(--secondary); }
+  .fd-subblock h5{ font-size:0.86rem; font-weight:700; margin-bottom:4px; letter-spacing:0.01em; }
+  .fd-subblock p{ font-size:0.86rem; color:var(--ink-soft); }
+
+  /* ==========================================================================
+     12. SYSTEM WORKFLOW DIAGRAM
+  ========================================================================== */
+  .flow-rail{ display:flex; align-items:stretch; justify-content:space-between; gap:0; position:relative; }
+  .flow-node{
+    flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; padding:0 8px; position:relative;
+  }
+  .flow-node .fn-icon{
+    width:76px; height:76px; border-radius:22px; background:var(--surface); border:1.5px solid var(--glass-border);
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--glass-shadow); position:relative; z-index:2;
+    transition:transform .4s var(--ease), border-color .4s ease;
+  }
+  .flow-node:hover .fn-icon{ transform:translateY(-6px) scale(1.06); border-color:var(--secondary); }
+  .flow-node .fn-icon svg{ width:32px; height:32px; color:var(--primary); }
+  html[data-theme="dark"] .flow-node .fn-icon svg{ color:var(--secondary); }
+  .flow-node h4{ font-size:0.92rem; }
+  .flow-node p{ font-size:0.78rem; color:var(--ink-faint); max-width:150px; }
+  .flow-connector{
+    flex:none; width:60px; align-self:center; height:2px; position:relative; top:-46px;
+    background:repeating-linear-gradient(90deg, var(--secondary) 0 8px, transparent 8px 14px);
+    overflow:visible;
+  }
+  .flow-connector::after{
+    content:''; position:absolute; right:-3px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 0 5px rgba(0,200,150,0.18); animation:travel 2.4s linear infinite;
+  }
+  @keyframes travel{ 0%{ left:0; opacity:0;} 10%{opacity:1;} 90%{opacity:1;} 100%{ left:calc(100% - 8px); opacity:0; } }
+  .flow-connector{ position:relative; }
+  .flow-connector::after{ left:0; }
+
+  /* ==========================================================================
+     13. HARDWARE GRID
+  ========================================================================== */
+  .hw-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:18px; }
+  .hw-card{
+    padding:22px 18px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px;
+    transition:transform .4s var(--ease), border-color .4s ease;
+  }
+  .hw-card:hover{ transform:translateY(-6px); border-color:var(--accent); }
+  .hw-ico{
+    width:54px; height:54px; border-radius:16px; background:linear-gradient(150deg,rgba(11,61,145,0.09),rgba(0,200,150,0.14));
+    display:flex; align-items:center; justify-content:center;
+  }
+  html[data-theme="dark"] .hw-ico{ background:linear-gradient(150deg,rgba(11,61,145,0.35),rgba(0,200,150,0.18)); }
+  .hw-ico svg{ width:24px; height:24px; color:var(--primary); }
+  html[data-theme="dark"] .hw-ico svg{ color:var(--accent); }
+  .hw-card h5{ font-size:0.85rem; line-height:1.3; }
+  .hw-card span{ font-size:0.74rem; color:var(--ink-faint); }
+
+  /* software badges */
+  .software-row{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
+  .sw-badge{
+    display:flex; align-items:center; gap:10px; padding:14px 22px; border-radius:var(--radius-pill);
+    transition:transform .35s var(--ease), border-color .3s ease;
+  }
+  .sw-badge:hover{ transform:translateY(-4px); border-color:var(--secondary); }
+  .sw-badge .swi{ width:30px; height:30px; border-radius:9px; background:var(--grad-primary); display:flex; align-items:center; justify-content:center; }
+  .sw-badge .swi svg{ width:15px; height:15px; color:#fff; }
+  .sw-badge span{ font-size:0.88rem; font-weight:600; }
+
+  /* ==========================================================================
+     14. DASHBOARD PREVIEW (live-simulated mockup)
+  ========================================================================== */
+  .dash-frame{ padding:0; overflow:hidden; }
+  .dash-topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:16px 24px;
+    background:var(--grad-primary); color:#fff;
+  }
+  .dash-topbar .dots{ display:flex; gap:7px; }
+  .dash-topbar .dots span{ width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.35); }
+  .dash-topbar h4{ color:#fff; font-size:0.95rem; font-family:var(--font-mono); letter-spacing:0.04em; }
+  .dash-topbar .ip{ font-family:var(--font-mono); font-size:0.76rem; opacity:0.75; }
+  .dash-body{ padding:28px; }
+  .dash-mode-row{ display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap; }
+  .mode-chip{ font-size:0.76rem; font-family:var(--font-mono); padding:7px 14px; border-radius:99px; border:1px solid var(--glass-border); color:var(--ink-faint); }
+  .mode-chip.active{ background:var(--grad-accent); color:#04241c; border-color:transparent; font-weight:700; }
+  .dash-cards{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+  .dcard{
+    padding:18px; border-radius:var(--radius-sm); background:var(--bg-alt); border:1px solid var(--glass-border);
+  }
+  .dcard .dc-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .dcard .dc-label{ font-size:0.72rem; color:var(--ink-faint); letter-spacing:0.05em; text-transform:uppercase; font-weight:700; }
+  .dcard .dc-val{ font-family:var(--font-mono); font-size:1.7rem; font-weight:700; color:var(--ink); }
+  .dcard .dc-unit{ font-size:0.9rem; color:var(--ink-faint); }
+  .dash-pumps{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .pump-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-radius:var(--radius-sm); background:var(--bg-alt); border:1px solid var(--glass-border); }
+  .pump-row span{ font-size:0.78rem; font-weight:600; }
+  .toggle-dot{ width:34px; height:18px; border-radius:99px; background:var(--ink-faint); position:relative; opacity:0.4; transition:background .3s, opacity .3s; }
+  .toggle-dot::after{ content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .3s; }
+  .toggle-dot.on{ background:var(--accent); opacity:1; }
+  .toggle-dot.on::after{ left:18px; }
+  .dash-note{ margin-top:20px; font-size:0.78rem; color:var(--ink-faint); text-align:center; font-family:var(--font-mono); }
+
+  /* ==========================================================================
+     15. VIDEO DEMO
+  ========================================================================== */
+  .video-frame{ position:relative; aspect-ratio:16/9; max-width:820px; margin:0 auto; overflow:hidden; border-radius:var(--radius-lg); }
+  .video-frame iframe{ width:100%; height:100%; border:0; position:relative; z-index:1; }
+  .video-frame::before{
+    content:''; position:absolute; inset:-2px; border-radius:inherit; z-index:0;
+    background:var(--grad-primary); opacity:0.9;
+  }
+
+  /* ==========================================================================
+     16. APPLICATIONS GRID
+  ========================================================================== */
+  .apps-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .app-card{ padding:30px 26px; display:flex; gap:18px; align-items:flex-start; transition:transform .4s var(--ease); }
+  .app-card:hover{ transform:translateY(-5px); }
+  .app-ico{ flex:none; width:48px; height:48px; border-radius:14px; background:var(--grad-accent); display:flex; align-items:center; justify-content:center; }
+  .app-ico svg{ width:22px; height:22px; color:#04241c; }
+  .app-card h4{ font-size:1rem; margin-bottom:6px; }
+  .app-card p{ font-size:0.86rem; color:var(--ink-soft); }
+
+  /* ==========================================================================
+     17. COST TABLE
+  ========================================================================== */
+  .cost-wrap{ overflow:hidden; }
+  .cost-scroll{ max-height:520px; overflow-y:auto; }
+  table.cost-table{ width:100%; border-collapse:collapse; }
+  .cost-table thead th{
+    position:sticky; top:0; z-index:2; background:var(--primary); color:#fff; text-align:left;
+    padding:16px 22px; font-size:0.78rem; letter-spacing:0.08em; text-transform:uppercase; font-family:var(--font-mono);
+  }
+  .cost-table thead th:last-child{ text-align:right; }
+  .cost-table tbody td{ padding:13px 22px; font-size:0.9rem; border-bottom:1px solid var(--glass-border); color:var(--ink-soft); }
+  .cost-table tbody td:first-child{ font-family:var(--font-mono); color:var(--ink-faint); width:50px; }
+  .cost-table tbody td:last-child{ text-align:right; font-family:var(--font-mono); color:var(--ink); font-weight:600; }
+  .cost-table tbody tr:hover{ background:rgba(0,174,239,0.06); }
+  .cost-table tfoot td{ padding:18px 22px; font-family:var(--font-display); font-weight:700; font-size:1.05rem; background:var(--bg-alt); color:var(--primary); }
+  html[data-theme="dark"] .cost-table tfoot td{ color:var(--secondary); }
+  .cost-table tfoot td:last-child{ text-align:right; font-family:var(--font-mono); }
+
+  /* ==========================================================================
+     18. CHALLENGES / HOW WE SOLVED THEM
+  ========================================================================== */
+  .challenge-list{ display:flex; flex-direction:column; gap:16px; }
+  .challenge-row{
+    display:grid; grid-template-columns:34px 1fr 1fr; gap:24px; padding:24px 26px; align-items:center;
+    transition:border-color .3s ease;
+  }
+  .challenge-row:hover{ border-color:var(--secondary); }
+  .chal-num{ font-family:var(--font-mono); font-size:0.8rem; color:var(--ink-faint); }
+  .chal-problem,.chal-solution{ display:flex; gap:12px; align-items:flex-start; }
+  .chal-problem .ci, .chal-solution .ci{ flex:none; width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; margin-top:2px; }
+  .chal-problem .ci{ background:rgba(255,120,60,0.14); }
+  .chal-problem .ci svg{ width:14px; height:14px; color:#d1560c; }
+  .chal-solution .ci{ background:rgba(0,200,150,0.14); }
+  .chal-solution .ci svg{ width:14px; height:14px; color:var(--accent-dark); }
+  html[data-theme="dark"] .chal-solution .ci svg{ color:var(--accent); }
+  .chal-problem h5,.chal-solution h5{ font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px; font-family:var(--font-mono); font-weight:700; }
+  .chal-problem p,.chal-solution p{ font-size:0.87rem; color:var(--ink-soft); }
+
+  /* ==========================================================================
+     19. FUTURE SCOPE
+  ========================================================================== */
+  .future-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .future-card{ padding:24px; display:flex; gap:14px; align-items:flex-start; transition:transform .35s var(--ease); }
+  .future-card:hover{ transform:translateY(-4px); }
+  .future-ico{ flex:none; width:38px; height:38px; border-radius:11px; background:rgba(0,174,239,0.12); display:flex; align-items:center; justify-content:center; }
+  .future-ico svg{ width:18px; height:18px; color:var(--secondary); }
+  .future-card p{ font-size:0.88rem; color:var(--ink-soft); padding-top:6px; }
+
+  /* ==========================================================================
+     20. TEAM + SUPERVISOR
+  ========================================================================== */
+  .team-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:20px; }
+  .team-card{ padding:26px 20px; text-align:center; transition:transform .4s var(--ease); }
+  .team-card:hover{ transform:translateY(-6px); }
+  .avatar{
+    width:84px; height:84px; border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center;
+    background:var(--grad-primary); color:#fff; font-family:var(--font-display); font-size:1.5rem; font-weight:700;
+    box-shadow:0 12px 24px -8px rgba(11,61,145,0.45); position:relative;
+  }
+  .avatar::after{ content:''; position:absolute; inset:-4px; border-radius:50%; border:1.5px dashed rgba(0,174,239,0.4); animation:spin 30s linear infinite; }
+  .team-card h4{ font-size:0.98rem; margin-bottom:4px; }
+  .team-card .tid{ font-family:var(--font-mono); font-size:0.74rem; color:var(--ink-faint); margin-bottom:8px; }
+  .team-card .role{ display:inline-block; font-size:0.72rem; font-weight:700; color:var(--primary); background:rgba(0,174,239,0.1); padding:4px 12px; border-radius:99px; }
+  html[data-theme="dark"] .team-card .role{ color:var(--secondary); }
+
+  .supervisor-card{
+    max-width:460px; margin:44px auto 0; padding:30px; display:flex; gap:20px; align-items:center;
+  }
+  .supervisor-card .avatar{ margin:0; flex:none; }
+  .supervisor-card .sup-info span{ display:block; font-family:var(--font-mono); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-faint); margin-bottom:4px; }
+  .supervisor-card .sup-info h4{ font-size:1.05rem; }
+
+  /* ==========================================================================
+     21. GALLERY
+  ========================================================================== */
+  .gallery-grid{ display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:160px; gap:14px; }
+  .gallery-grid .g-item:nth-child(1){ grid-column:span 2; grid-row:span 2; }
+  .gallery-grid .g-item:nth-child(5){ grid-column:span 2; }
+  .g-item{
+    border-radius:var(--radius); overflow:hidden; position:relative; cursor:pointer;
+    background:linear-gradient(150deg,rgba(11,61,145,0.10),rgba(0,174,239,0.16));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    transition:transform .5s var(--ease);
+  }
+  html[data-theme="dark"] .g-item{ background:linear-gradient(150deg,rgba(11,61,145,0.4),rgba(0,174,239,0.18)); }
+  .g-item:hover{ transform:scale(1.03); }
+  .g-item svg{ width:26px; height:26px; color:var(--secondary); opacity:0.85; }
+  .g-item span{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-faint); }
+  .g-item::after{
+    content:''; position:absolute; inset:0; opacity:0; transition:opacity .4s ease;
+    background:linear-gradient(0deg, rgba(11,61,145,0.55), transparent 60%);
+  }
+  .g-item:hover::after{ opacity:1; }
+
+  /* ==========================================================================
+     22. DOCUMENTATION
+  ========================================================================== */
+  .doc-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .doc-card{
+    padding:30px 22px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px;
+    transition:transform .4s var(--ease);
+  }
+  .doc-card:hover{ transform:translateY(-6px); }
+  .doc-ico{ width:52px; height:52px; border-radius:16px; background:var(--grad-primary); display:flex; align-items:center; justify-content:center; }
+  .doc-ico svg{ width:24px; height:24px; color:#fff; }
+  .doc-card h5{ font-size:0.94rem; }
+  .doc-card .soon{ font-size:0.7rem; color:var(--ink-faint); font-family:var(--font-mono); }
+
+  /* ==========================================================================
+     23. FOOTER
+  ========================================================================== */
+  footer{ position:relative; padding:90px 0 30px; background:var(--primary); color:#cfe1f7; overflow:hidden; }
+  html[data-theme="dark"]{ }
+  footer::before{
+    content:''; position:absolute; inset:0; opacity:0.6;
+    background:radial-gradient(circle at 10% 0%, rgba(0,174,239,0.25), transparent 45%), radial-gradient(circle at 90% 100%, rgba(0,200,150,0.2), transparent 40%);
+  }
+  .footer-inner{ position:relative; display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:50px; margin-bottom:60px; }
+  .footer-brand .brand{ color:#fff; margin-bottom:14px; }
+  .footer-brand p{ color:#a9c2e6; font-size:0.9rem; max-width:280px; }
+  .footer-col h5{ color:#fff; font-size:0.82rem; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:18px; font-family:var(--font-mono); }
+  .footer-col ul{ display:flex; flex-direction:column; gap:11px; }
+  .footer-col a, .footer-col span{ color:#a9c2e6; font-size:0.9rem; transition:color .3s ease; }
+  .footer-col a:hover{ color:#fff; }
+  .footer-social{ display:flex; gap:10px; margin-top:18px; }
+  .footer-social a{ width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; transition:background .3s, transform .3s; }
+  .footer-social a:hover{ background:rgba(255,255,255,0.18); transform:translateY(-3px); }
+  .footer-social svg{ width:16px; height:16px; color:#fff; }
+  .footer-bottom{ position:relative; border-top:1px solid rgba(255,255,255,0.12); padding-top:26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+  .footer-bottom p{ font-size:0.82rem; color:#8fabd6; }
+
+  /* ==========================================================================
+     24. RESPONSIVE
+  ========================================================================== */
+  @media (max-width:1080px){
+    .about-grid{ grid-template-columns:1fr; gap:44px; }
+    .pond-illustration{ max-width:440px; margin:0 auto; }
+    .problem-grid,.objectives-grid{ grid-template-columns:repeat(2,1fr); }
+    .novelty-grid{ grid-template-columns:repeat(2,1fr); }
+    .glance-grid{ grid-template-columns:repeat(3,1fr); }
+    .hw-grid{ grid-template-columns:repeat(3,1fr); }
+    .apps-grid{ grid-template-columns:repeat(2,1fr); }
+    .future-grid{ grid-template-columns:repeat(2,1fr); }
+    .team-grid{ grid-template-columns:repeat(3,1fr); }
+    .doc-grid{ grid-template-columns:repeat(2,1fr); }
+    .footer-inner{ grid-template-columns:1fr 1fr; }
+    .dash-cards, .dash-pumps{ grid-template-columns:repeat(2,1fr); }
+    .flow-rail{ flex-wrap:wrap; row-gap:50px; }
+    .flow-connector{ display:none; }
+  }
+
+  @media (max-width:760px){
+    .wrap{ padding:0 20px; }
+    .section{ padding:90px 0; }
+    .nav-links{ display:none; }
+    #nav-toggle{ display:flex; }
+    .hero-stats{ grid-template-columns:repeat(2,1fr); }
+    .hero-title{ font-size:clamp(2.6rem,14vw,4rem); }
+    .about-grid{ gap:34px; }
+    .problem-grid,.objectives-grid,.novelty-grid,.glance-grid,.hw-grid,.apps-grid,.future-grid,.team-grid,.doc-grid{ grid-template-columns:repeat(2,1fr); }
+    .feature-detail{ grid-template-columns:1fr; gap:30px; }
+    .feature-detail.reverse{ direction:ltr; }
+    .footer-inner{ grid-template-columns:1fr; gap:36px; }
+    .quote-block{ padding:36px 24px; }
+    .gallery-grid{ grid-template-columns:repeat(2,1fr); grid-auto-rows:130px; }
+    .gallery-grid .g-item:nth-child(1){ grid-column:span 2; grid-row:span 1; }
+    .challenge-row{ grid-template-columns:1fr; gap:14px; }
+    .chal-num{ display:none; }
+    .cost-table thead th, .cost-table tbody td{ padding:10px 12px; font-size:0.8rem; }
+  }
+
+  @media (max-width:480px){
+    .hero-stats{ grid-template-columns:repeat(2,1fr); }
+    .problem-grid,.objectives-grid,.novelty-grid,.glance-grid,.hw-grid,.apps-grid,.future-grid,.team-grid,.doc-grid{ grid-template-columns:1fr; }
+    .hero-actions{ flex-direction:column; width:100%; }
+    .hero-actions .btn{ width:100%; }
+  }
+
+</style>
+</head>
+<body data-theme="light">
+
+  <!-- ============================== LOADER ============================== -->
+  <div id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-title">BlueCycle</div>
+    <div class="loader-word">Calibrating sensors…</div>
+  </div>
+
+  <div id="scroll-progress"></div>
+  <div id="cursor-glow"></div>
+
+  <!-- ============================== NAVBAR ============================== -->
+  <header id="navbar">
+    <div class="nav-inner">
+      <a href="#hero" class="brand">
+        <span class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 6 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M4 19c2 2 4 2 6 0s4-2 6 0 4 2 6 0" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".6"/><circle cx="12" cy="7" r="3" stroke="#fff" stroke-width="2"/></svg>
+        </span>
+        BlueCycle
+      </a>
+      <nav class="nav-links" id="nav-links">
+        <a href="#about">About</a>
+        <a href="#features">Features</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#team">Team</a>
+        <a href="#docs">Docs</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+          <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <a href="https://github.com/Nahid0269/BlueCycle-Smart-Pond-Monitoring-System" target="_blank" rel="noopener" class="icon-btn" aria-label="GitHub Repository">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.08.78 2.17v3.22c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg>
+        </a>
+        <button class="icon-btn" id="nav-toggle" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- mobile menu -->
+  <div id="mobile-menu" class="glass" style="position:fixed; top:calc(var(--nav-h) + 10px); right:20px; left:20px; z-index:999; padding:22px; display:none; flex-direction:column; gap:6px;">
+    <a href="#about" style="padding:12px 8px;">About</a>
+    <a href="#features" style="padding:12px 8px;">Features</a>
+    <a href="#workflow" style="padding:12px 8px;">Workflow</a>
+    <a href="#hardware" style="padding:12px 8px;">Hardware</a>
+    <a href="#dashboard" style="padding:12px 8px;">Dashboard</a>
+    <a href="#team" style="padding:12px 8px;">Team</a>
+    <a href="#docs" style="padding:12px 8px;">Docs</a>
+  </div>
+
+  <!-- ============================== HERO ============================== -->
+  <section id="hero">
+    <div class="hero-bg">
+      <div class="hero-grid-lines"></div>
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+
+      <!-- IoT sensor node network -->
+      <svg class="node-net" viewBox="0 0 1280 800" preserveAspectRatio="xMidYMid slice">
+        <g stroke="#00AEEF" stroke-width="1.2">
+          <line x1="120" y1="140" x2="340" y2="260"/>
+          <line x1="340" y1="260" x2="600" y2="150"/>
+          <line x1="600" y1="150" x2="880" y2="230"/>
+          <line x1="880" y1="230" x2="1140" y2="120"/>
+          <line x1="340" y1="260" x2="420" y2="470"/>
+          <line x1="880" y1="230" x2="960" y2="480"/>
+        </g>
+        <g fill="#00C896">
+          <circle cx="120" cy="140" r="3"/>
+          <circle cx="340" cy="260" r="3"/>
+          <circle cx="600" cy="150" r="3"/>
+          <circle cx="880" cy="230" r="3"/>
+          <circle cx="1140" cy="120" r="3"/>
+          <circle cx="420" cy="470" r="3"/>
+          <circle cx="960" cy="480" r="3"/>
+        </g>
+      </svg>
+
+      <!-- rising bubbles -->
+      <div class="bubble" style="left:8%; width:14px; height:14px; animation-duration:9s; animation-delay:0s;"></div>
+      <div class="bubble" style="left:18%; width:8px; height:8px; animation-duration:7s; animation-delay:1.4s;"></div>
+      <div class="bubble" style="left:28%; width:18px; height:18px; animation-duration:11s; animation-delay:2.6s;"></div>
+      <div class="bubble" style="left:42%; width:10px; height:10px; animation-duration:8s; animation-delay:.6s;"></div>
+      <div class="bubble" style="left:58%; width:15px; height:15px; animation-duration:10s; animation-delay:3.2s;"></div>
+      <div class="bubble" style="left:69%; width:9px; height:9px; animation-duration:7.5s; animation-delay:1.8s;"></div>
+      <div class="bubble" style="left:80%; width:16px; height:16px; animation-duration:9.5s; animation-delay:.2s;"></div>
+      <div class="bubble" style="left:91%; width:11px; height:11px; animation-duration:8.5s; animation-delay:2.2s;"></div>
+
+      <div class="wave-wrap">
+        <svg class="wave-1" viewBox="0 0 2400 220" preserveAspectRatio="none"><path d="M0,110 C300,180 600,40 900,110 C1200,180 1500,40 1800,110 C2100,180 2300,110 2400,110 L2400,220 L0,220 Z" fill="#00AEEF"/></svg>
+        <svg class="wave-2" viewBox="0 0 2400 220" preserveAspectRatio="none"><path d="M0,130 C300,60 600,190 900,120 C1200,50 1500,190 1800,120 C2100,60 2300,130 2400,130 L2400,220 L0,220 Z" fill="#00C896"/></svg>
+        <svg class="wave-3" viewBox="0 0 2400 220" preserveAspectRatio="none"><path d="M0,150 C300,100 600,180 900,140 C1200,100 1500,180 1800,140 C2100,100 2300,150 2400,150 L2400,220 L0,220 Z" fill="#0B3D91"/></svg>
+      </div>
+    </div>
+
+    <div class="wrap hero-inner">
+      <div class="hero-badge"><span class="flag">1st</span> Winner — University Project Show</div>
+      <h1 class="hero-title">BlueCycle</h1>
+      <p class="hero-sub">Smart Pond Monitoring &amp; Automatic Water Quality Management System — continuous pH, temperature, turbidity and water-level sensing with automated response, built on ESP32.</p>
+
+      <div class="hero-actions">
+        <a href="#docs" class="btn btn-primary">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12h6M9 16h6M9 8h2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+          View Documentation
+        </a>
+        <a href="https://github.com/Nahid0269/BlueCycle-Smart-Pond-Monitoring-System" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.08.78 2.17v3.22c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg>
+          GitHub
+        </a>
+        <a href="#demo" class="btn btn-accent">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="#04241c" stroke-width="1.8"/><path d="M10 8.5l6 3.5-6 3.5v-7Z" fill="#04241c"/></svg>
+          Watch Demo
+        </a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-cell"><div class="stat-num" data-count="4">0</div><div class="stat-label">Parameters Monitored</div></div>
+        <div class="stat-cell"><div class="stat-num" data-count="5">0</div><div class="stat-label">Automated Actuators</div></div>
+        <div class="stat-cell"><div class="stat-num" data-count="8026" data-prefix="৳">0</div><div class="stat-label">Prototype Build Cost</div></div>
+        <div class="stat-cell"><div class="stat-num" data-count="1" data-suffix="st"><span>0</span></div><div class="stat-label">Place, Project Show</div></div>
+      </div>
+
+      <div class="telemetry-bar">
+        <div class="telemetry-track" id="telemetry-track"><!-- filled by JS, duplicated for seamless loop --></div>
+      </div>
+    </div>
+
+    <div class="scroll-cue"><span>Scroll</span><div class="mouse"></div></div>
+  </section>
+
+  <!-- ============================== ABOUT ============================== -->
+  <section id="about" class="section">
+    <div class="wrap">
+      <div class="about-grid">
+        <div class="about-copy reveal">
+          <span class="eyebrow"><span class="dot"></span> About the project</span>
+          <h2>From manual checks to <span class="grad-text">continuous care.</span></h2>
+          <p>Traditional pond monitoring depends on someone physically visiting the pond, testing a sample, and reacting after the fact — by which point stressed or dying fish are often the first sign anything was wrong. It's slow, inconsistent, and impossible to scale across multiple ponds or hatchery tanks.</p>
+          <p><strong>BlueCycle solves this by continuously monitoring water quality using IoT sensors and automatically maintaining safe pond conditions</strong>, day and night, without waiting for a human to notice a problem. The completed prototype uses an <strong>ESP32</strong> as the main controller and local WiFi dashboard host, paired with an <strong>Arduino UNO</strong> acting as a dedicated pH-reading bridge over I2C for a cleaner, more stable measurement.</p>
+          <ul class="about-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Built as a working small-scale prototype, not a concept — every sensor and actuator described here was wired, coded and demonstrated live.</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Reacts on its own — relay-driven pumps, buzzer alerts and a scheduled servo feeder respond to sensor thresholds without operator input.</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Won 1st place at the university Project Show, judged against every other final-year electronics and IoT build.</li>
+          </ul>
+        </div>
+        <div class="pond-illustration glass reveal">
+          <svg viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="pondGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#00AEEF" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#0B3D91" stop-opacity="0.75"/>
+              </linearGradient>
+            </defs>
+            <rect width="420" height="420" fill="url(#pondGrad)"/>
+            <g opacity="0.35" stroke="#ffffff" stroke-width="1">
+              <line x1="0" y1="90" x2="420" y2="90"/><line x1="0" y1="160" x2="420" y2="160"/>
+              <line x1="0" y1="230" x2="420" y2="230"/><line x1="0" y1="300" x2="420" y2="300"/>
+            </g>
+            <!-- sensor probe -->
+            <g>
+              <rect x="196" y="30" width="8" height="140" rx="4" fill="#ffffff" opacity="0.85"/>
+              <circle cx="200" cy="30" r="16" fill="#00C896"/>
+              <circle cx="200" cy="30" r="16" fill="none" stroke="#ffffff" stroke-width="2">
+                <animate attributeName="r" values="16;26;16" dur="2.6s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.9;0;0.9" dur="2.6s" repeatCount="indefinite"/>
+              </circle>
+              <path d="M200 170c-10 12-10 22 0 30 10-8 10-18 0-30Z" fill="#0B3D91" opacity="0.6"/>
+            </g>
+            <!-- fish -->
+            <g fill="#ffffff" opacity="0.92">
+              <path d="M90 250c22-14 46-14 62 0-16 14-40 14-62 0Z"/>
+              <path d="M86 250l-14-9v18l14-9Z"/>
+              <circle cx="132" cy="246" r="2.4" fill="#0B3D91"/>
+            </g>
+            <g fill="#ffffff" opacity="0.7">
+              <path d="M290 320c18-11 37-11 50 0-13 11-32 11-50 0Z"/>
+              <path d="M286 320l-11-7v14l11-7Z"/>
+              <circle cx="322 " cy="317" r="2" fill="#0B3D91"/>
+            </g>
+            <!-- floating particulate -->
+            <g fill="#00C896">
+              <circle cx="150" cy="120" r="3"><animate attributeName="cy" values="120;100;120" dur="4s" repeatCount="indefinite"/></circle>
+              <circle cx="260" cy="190" r="2.4"><animate attributeName="cy" values="190;170;190" dur="3.4s" repeatCount="indefinite"/></circle>
+              <circle cx="330" cy="130" r="2.8"><animate attributeName="cy" values="130;110;130" dur="5s" repeatCount="indefinite"/></circle>
+            </g>
+            <!-- waterline waves -->
+            <path d="M0 380c40-14 80-14 120 0s80 14 120 0 80-14 120 0 60 10 60 10v30H0Z" fill="#082a68" opacity="0.55"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- PROJECT IDEA -->
+      <div class="quote-block reveal">
+        <span class="quote-mark">“</span>
+        <p>BlueCycle is an IoT-based smart pond management system that continuously monitors pH, temperature, turbidity and water level, while automatically controlling pumps and a feeding mechanism through ESP32 and a real-time dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PROBLEM STATEMENT ============================== -->
+  <section id="problem" class="section-tight">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> The problem</span>
+        <h2>Pond water goes bad quietly, then all at once.</h2>
+        <p>Fish farming and hatchery management depend on stable pH, temperature, turbidity and oxygen — but the tools most ponds rely on haven't kept up.</p>
+      </div>
+      <div class="problem-grid reveal reveal-stagger">
+        <div class="problem-card glass" style="--i:0">
+          <span class="num">01</span>
+          <div class="picon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Manual monitoring</h3>
+          <p>Testing pH or turbidity by hand is slow, infrequent, and easy to skip — problems are caught late, if at all.</p>
+        </div>
+        <div class="problem-card glass" style="--i:1">
+          <span class="num">02</span>
+          <div class="picon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 1 1-12 0c0-3.5 3-7 6-11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></div>
+          <h3>Fish mortality</h3>
+          <p>Sudden pH swings, low oxygen or dirty water can kill stock within hours of the first warning sign.</p>
+        </div>
+        <div class="problem-card glass" style="--i:2">
+          <span class="num">03</span>
+          <div class="picon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17c3-8 6-8 9 0M12 17c3-8 6-8 9 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Water quality fluctuations</h3>
+          <p>Temperature, pH and turbidity drift constantly with weather, feeding and stocking density — and rarely at convenient hours.</p>
+        </div>
+        <div class="problem-card glass" style="--i:3">
+          <span class="num">04</span>
+          <div class="picon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="2"/><path d="M3 20c0-3.5 2.5-6 6-6s6 2.5 6 6M15 8a3 3 0 1 1 4 2.8M21 20c0-2.8-1.8-5-4.5-5.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Labour dependency &amp; scale</h3>
+          <p>Commercial hatcheries running many tanks can't staff round-the-clock manual checks without heavy, ongoing labour cost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== OBJECTIVES ============================== -->
+  <section id="objectives" class="section-tight" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Objectives</span>
+        <h2>What BlueCycle set out to do</h2>
+      </div>
+      <div class="objectives-grid reveal reveal-stagger">
+        <div class="obj-card glass" style="--i:0"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Real-time monitoring</h4><p>Continuously read pH, temperature, turbidity and water level instead of periodic manual sampling.</p></div>
+        <div class="obj-card glass" style="--i:1"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Automatic water quality control</h4><p>Trigger dosing pumps, aeration and water exchange automatically once a safe threshold is crossed.</p></div>
+        <div class="obj-card glass" style="--i:2"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Low cost</h4><p>Deliver the full prototype on an accessible, hobbyist-grade component budget.</p></div>
+        <div class="obj-card glass" style="--i:3"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Easy dashboard</h4><p>Surface every reading and control on a clear web dashboard anyone can read at a glance.</p></div>
+        <div class="obj-card glass" style="--i:4"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Remote monitoring</h4><p>Check and control the pond over WiFi from a phone, without standing next to it.</p></div>
+        <div class="obj-card glass" style="--i:5"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Fish health improvement</h4><p>Reduce stress and mortality by catching unsafe conditions minutes after they start, not days later.</p></div>
+        <div class="obj-card glass" style="--i:6"><div class="obj-check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#04241c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Commercial-use pathway</h4><p>Lay the groundwork for a version suited to commercial hatcheries and multi-tank operations.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== NOVELTY ============================== -->
+  <section id="novelty" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Novelty</span>
+        <h2>What makes it different</h2>
+        <p>BlueCycle isn't just a sensor logger — it closes the loop between reading a problem and correcting it.</p>
+      </div>
+      <div class="novelty-grid reveal reveal-stagger">
+        <div class="novelty-card glass" style="--i:0">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l2-7 4 14 2-7h6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Real-time monitoring</h3>
+          <p>pH, temperature, turbidity and water level are read continuously, not sampled once a day.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:1">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 3h6l1 4H8l1-4Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+          <h3>Automatic acid/base dosing</h3>
+          <p>Relay-driven dosing pumps correct pH the moment it drifts outside the safe 6.5–8.5 range.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:2">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2M4 19c2 2 4 2 6 0s4-2 6 0 4 2 4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M12 3v9" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Automatic aeration</h3>
+          <p>The air/oxygen pump switches on when water temperature climbs, keeping oxygen circulating.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:3">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="#fff" stroke-width="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Automatic water pump</h3>
+          <p>An underflow reading from the ultrasonic sensor switches the water pump on to restore safe level.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:4">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><path d="M12 7v5l3.2 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Scheduled feeding</h3>
+          <p>A 360° servo releases food at two dashboard-set times, then reverses automatically after a delay.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:5">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="12" rx="2" stroke="#fff" stroke-width="2"/><path d="M9 20h6M12 16v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h3>Web dashboard</h3>
+          <p>Every reading and control is on one local ESP32-hosted dashboard — no app install required.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:6">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.4" fill="#fff"/></svg></div>
+          <h3>WiFi-based control</h3>
+          <p>ESP32 hosts its own access point, so the pond can be checked and controlled from a phone nearby.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:7">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Low cost</h3>
+          <p>The complete working prototype was built for roughly ৳8,026 — accessible for a student project budget.</p>
+        </div>
+        <div class="novelty-card glass" style="--i:8">
+          <div class="novelty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V9l4-4 4 4v12M13 21V13l3-2 3 2v8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+          <h3>Commercial hatchery ready</h3>
+          <p>Sensor-controller-output architecture designed to scale toward multi-tank hatchery deployment.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FEATURES AT A GLANCE ============================== -->
+  <section id="features" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Features at a glance</span>
+        <h2>Every sensor, actuator and mode</h2>
+      </div>
+      <div class="glance-grid reveal reveal-stagger">
+        <div class="glance-card glass" style="--i:0"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10.5a3.5 3.5 0 1 1-2 0V3h2Z"/></svg><span>Photo</span></div><h4>Temperature sensor</h4><p>DS18B20 waterproof probe reads live water temperature.</p></div>
+        <div class="glance-card glass" style="--i:1"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span>Photo</span></div><h4>pH sensor</h4><p>Analog probe measures acidity/basicity, read via Arduino UNO.</p></div>
+        <div class="glance-card glass" style="--i:2"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/></svg><span>Photo</span></div><h4>Turbidity sensor</h4><p>Detects water clarity to flag clean vs. dirty conditions.</p></div>
+        <div class="glance-card glass" style="--i:3"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M8 21h8M12 6a6 6 0 0 0-3 11.2V21h6v-3.8A6 6 0 0 0 12 6Z"/></svg><span>Photo</span></div><h4>Ultrasonic sensor</h4><p>HC-SR04 measures distance to the water surface for level sensing.</p></div>
+        <div class="glance-card glass" style="--i:4"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg><span>Photo</span></div><h4>Servo feeder</h4><p>MG90S 360° servo dispenses food on a two-time daily schedule.</p></div>
+        <div class="glance-card glass" style="--i:5"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z"/><path d="M9 3h6l1 4H8l1-4Z"/></svg><span>Photo</span></div><h4>Acid dosing pump</h4><p>Activates automatically when the pond turns basic.</p></div>
+        <div class="glance-card glass" style="--i:6"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z"/><path d="M9 3h6l1 4H8l1-4Z"/></svg><span>Photo</span></div><h4>Base dosing pump</h4><p>Activates automatically when the pond turns acidic.</p></div>
+        <div class="glance-card glass" style="--i:7"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg><span>Photo</span></div><h4>Water pump</h4><p>Restores safe water level automatically on underflow.</p></div>
+        <div class="glance-card glass" style="--i:8"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2M12 3v9"/></svg><span>Photo</span></div><h4>Air / oxygen pump</h4><p>Circulates and aerates the pond when temperature rises.</p></div>
+        <div class="glance-card glass" style="--i:9"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M9 12h6"/></svg><span>Photo</span></div><h4>4-channel relay module</h4><p>Optocoupler-isolated relays safely switch every pump on/off.</p></div>
+        <div class="glance-card glass" style="--i:10"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Photo</span></div><h4>ESP32 controller</h4><p>Main brain — reads sensors, runs logic, hosts WiFi and dashboard.</p></div>
+        <div class="glance-card glass" style="--i:11"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10h8M8 14h5"/></svg><span>Photo</span></div><h4>16×2 I2C LCD</h4><p>Local at-a-glance display for live sensor status.</p></div>
+        <div class="glance-card glass" style="--i:12"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 8-8 8-8-8 8-8Z"/><path d="M12 9v4M12 15.5v.1"/></svg><span>Photo</span></div><h4>Buzzer alert</h4><p>Sounds on unsafe pH, temperature, dirty water or no-reading faults.</p></div>
+        <div class="glance-card glass" style="--i:13"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6M12 16v4"/></svg><span>Photo</span></div><h4>Web dashboard</h4><p>Live readings and manual controls served at 192.168.4.1.</p></div>
+        <div class="glance-card glass" style="--i:14"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg><span>Photo</span></div><h4>Auto mode</h4><p>Sensors drive pumps, feeder and alerts against safe thresholds.</p></div>
+        <div class="glance-card glass" style="--i:15"><div class="glance-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 12h10M7 8h10M7 16h6"/><circle cx="19" cy="16" r="2"/></svg><span>Photo</span></div><h4>Manual / demo mode</h4><p>Operate every pump and the feeder by hand from the dashboard.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FEATURE DETAILS ============================== -->
+  <section id="feature-details" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Feature details</span>
+        <h2>How each response actually works</h2>
+      </div>
+
+      <div class="feature-detail reveal">
+        <div class="fd-visual"><span class="fd-tag">DS18B20</span><span class="fd-index">01</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><path d="M12 3v10.5a3.5 3.5 0 1 1-2 0V3h2Z"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 01</span>
+          <h3>Temperature monitoring</h3>
+          <p>A waterproof DS18B20 digital sensor sits in the pond and reports live water temperature to the ESP32 over its one-wire bus.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h5>Working principle</h5><p>Readings are compared against a safe band of roughly 18°C–32°C; the ESP32 flags a temperature alert badge the moment a reading leaves that range.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 1 1-12 0c0-3.5 3-7 6-11Z"/></svg></div><div><h5>Real-life benefit</h5><p>High water temperature lowers dissolved oxygen — catching it early lets the system aerate before fish are stressed.</p></div></div>
+        </div>
+      </div>
+
+      <div class="feature-detail reverse reveal">
+        <div class="fd-visual"><span class="fd-tag">Arduino UNO · I2C</span><span class="fd-index">02</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 02</span>
+          <h3>pH monitoring &amp; dosing</h3>
+          <p>An analog pH probe is read by a dedicated Arduino UNO, which averages the signal, converts it against a calibrated neutral baseline, and streams the result to the ESP32 as a slave device over I2C.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z"/><path d="M9 3h6l1 4H8l1-4Z"/></svg></div><div><h5>Working principle</h5><p>The safe band is treated as pH 6.5–8.5. Below it, water reads acidic and the base pump can respond; above it, water reads basic and the acid pump can respond.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div><div><h5>Real-life benefit</h5><p>Offloading pH reading to a second microcontroller removed the analog noise that made ESP32-only readings unreliable — a real fix found during testing.</p></div></div>
+        </div>
+      </div>
+
+      <div class="feature-detail reveal">
+        <div class="fd-visual"><span class="fd-tag">Analog · Calibrated</span><span class="fd-index">03</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2M4 19c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 03</span>
+          <h3>Turbidity monitoring</h3>
+          <p>A turbidity sensor is calibrated against a normal-pond-water baseline, then watched for drift that signals cloudy or dirty water.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h5>Working principle</h5><p>Raw readings are compared to a calibrated baseline and sensitivity range; crossing the threshold flips the dashboard status from clean to dirty.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3c3 4 6 7.5 6 11a6 6 0 1 1-12 0c0-3.5 3-7 6-11Z"/></svg></div><div><h5>Real-life benefit</h5><p>Cloudy water is often an early sign of overfeeding or waste build-up — flagging it early supports timely water exchange.</p></div></div>
+        </div>
+      </div>
+
+      <div class="feature-detail reverse reveal">
+        <div class="fd-visual"><span class="fd-tag">HC-SR04</span><span class="fd-index">04</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><path d="M12 3v3M8 21h8M12 6a6 6 0 0 0-3 11.2V21h6v-3.8A6 6 0 0 0 12 6Z"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 04</span>
+          <h3>Water level monitoring</h3>
+          <p>An ultrasonic sensor measures the distance from itself down to the water surface, with a safe center point around 15&nbsp;cm.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h5>Working principle</h5><p>Below ~14 cm reads as overflow (display only); above ~16 cm reads as underflow and switches the water pump on automatically in auto mode.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div><div><h5>Real-life benefit</h5><p>Keeps pond depth in the range fish need without anyone manually checking a level marker.</p></div></div>
+        </div>
+      </div>
+
+      <div class="feature-detail reveal">
+        <div class="fd-visual"><span class="fd-tag">MG90S Servo</span><span class="fd-index">05</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 05</span>
+          <h3>Automatic feeding</h3>
+          <p>Two feeding times are set from the dashboard. When either arrives, a 360° servo turns to release food, then reverses after a set delay.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h5>Working principle</h5><p>Home and target limit switches confirm the feeder has actually opened and returned, so a feeding cycle can't stall mid-way.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div><div><h5>Real-life benefit</h5><p>Consistent, on-time feeding without staff being physically present — a direct labour saving for a working farm.</p></div></div>
+        </div>
+      </div>
+
+      <div class="feature-detail reverse reveal">
+        <div class="fd-visual"><span class="fd-tag">4-Ch Relay</span><span class="fd-index">06</span>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M9 12h6"/></svg>
+        </div>
+        <div class="fd-copy">
+          <span class="eyebrow"><span class="dot"></span> Feature 06</span>
+          <h3>Automatic pump control</h3>
+          <p>Acid, base, air and water pumps are each switched through their own channel on a 4-channel optocoupler-isolated relay module.</p>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h5>Working principle</h5><p>The ESP32 decision layer switches each relay HIGH or LOW based on live sensor thresholds, with a short cooldown between automatic actions to avoid rapid re-triggering.</p></div></div>
+          <div class="fd-subblock"><div class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div><div><h5>Real-life benefit</h5><p>Keeps higher-current pump loads electrically isolated from the microcontroller — the exact fix used after an early ESP32 was damaged during testing.</p></div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================== SYSTEM WORKFLOW ============================== -->
+  <section id="workflow" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> System workflow</span>
+        <h2>Sensor to decision to action</h2>
+        <p>The completed system follows a sensor → controller → output architecture, closing the loop automatically before it reaches the dashboard.</p>
+      </div>
+
+      <div class="flow-rail reveal reveal-stagger">
+        <div class="flow-node" style="--i:0">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/><circle cx="12" cy="7" r="3"/></svg></div>
+          <h4>Sensors</h4><p>pH, temperature, turbidity, water level</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:1">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6"/></svg></div>
+          <h4>Arduino UNO</h4><p>pH bridge over I2C</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:2">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
+          <h4>ESP32</h4><p>Main controller + WiFi host</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:3">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h4l2-4 4 8 2-4h4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h4>Decision algorithm</h4><p>Compares readings to safe thresholds</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:4">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M9 12h6"/></svg></div>
+          <h4>Relay module</h4><p>Switches each output safely</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:5">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div>
+          <h4>Pumps &amp; feeder</h4><p>Acid, base, air, water, servo</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:6">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6M12 16v4"/></svg></div>
+          <h4>Dashboard</h4><p>Live status at 192.168.4.1</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-node" style="--i:7">
+          <div class="fn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg></div>
+          <h4>Farmer</h4><p>Reads status, steps in when needed</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== HARDWARE ============================== -->
+  <section id="hardware" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Hardware</span>
+        <h2>The complete component list</h2>
+      </div>
+      <div class="hw-grid reveal reveal-stagger">
+        <div class="hw-card glass" style="--i:0"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div><h5>ESP32 Dev Board</h5><span>Main controller + WiFi host</span></div>
+        <div class="hw-card glass" style="--i:1"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6"/></svg></div><h5>Arduino UNO</h5><span>pH read + I2C bridge</span></div>
+        <div class="hw-card glass" style="--i:2"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></div><h5>pH Sensor Module</h5><span>Acidity / basicity</span></div>
+        <div class="hw-card glass" style="--i:3"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v10.5a3.5 3.5 0 1 1-2 0V3h2Z"/></svg></div><h5>DS18B20 Sensor</h5><span>Waterproof temperature</span></div>
+        <div class="hw-card glass" style="--i:4"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/></svg></div><h5>Turbidity Sensor</h5><span>Water clarity</span></div>
+        <div class="hw-card glass" style="--i:5"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v3M8 21h8M12 6a6 6 0 0 0-3 11.2V21h6v-3.8A6 6 0 0 0 12 6Z"/></svg></div><h5>HC-SR04</h5><span>Ultrasonic water level</span></div>
+        <div class="hw-card glass" style="--i:6"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></div><h5>MG90S Servo</h5><span>360° feeder motor</span></div>
+        <div class="hw-card glass" style="--i:7"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M9 12h6"/></svg></div><h5>4-Ch Relay Module</h5><span>Isolated switching</span></div>
+        <div class="hw-card glass" style="--i:8"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10h8M8 14h5"/></svg></div><h5>16×2 I2C LCD</h5><span>Local display</span></div>
+        <div class="hw-card glass" style="--i:9"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 8-8 8-8-8 8-8Z"/><path d="M12 9v4"/></svg></div><h5>Passive Buzzer</h5><span>Unsafe-condition alert</span></div>
+        <div class="hw-card glass" style="--i:10"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z"/><path d="M9 3h6l1 4H8l1-4Z"/></svg></div><h5>Acid Dosing Pump</h5><span>Relay-driven correction</span></div>
+        <div class="hw-card glass" style="--i:11"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7h8l1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L8 7Z"/><path d="M9 3h6l1 4H8l1-4Z"/></svg></div><h5>Base Dosing Pump</h5><span>Relay-driven correction</span></div>
+        <div class="hw-card glass" style="--i:12"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div><h5>Water Pump</h5><span>Diaphragm, self-priming</span></div>
+        <div class="hw-card glass" style="--i:13"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2M12 3v9"/></svg></div><h5>Air / Oxygen Pump</h5><span>6V mini aeration pump</span></div>
+        <div class="hw-card glass" style="--i:14"><div class="hw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 3V1.5h4V3"/></svg></div><h5>Battery + Buck Converter</h5><span>18650 pack, LM2596 step-down</span></div>
+      </div>
+
+      <!-- SOFTWARE -->
+      <div class="head-block center" style="margin-top:96px;">
+        <span class="eyebrow"><span class="dot"></span> Software &amp; tools</span>
+        <h2>What runs it</h2>
+      </div>
+      <div class="software-row reveal">
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></span><span>Arduino IDE</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/></svg></span><span>ESP32 Core</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span>HTML</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 4h16l-1.5 15L12 21l-6.5-2L4 4Z"/></svg></span><span>CSS</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 3h14v18H5z"/><path d="M9 15l3 2 3-2"/></svg></span><span>JavaScript</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0"/></svg></span><span>WiFi Access Point</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="5" width="16" height="11" rx="2"/></svg></span><span>Web Dashboard</span></div>
+        <div class="sw-badge glass"><span class="swi"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.08.78 2.17v3.22c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg></span><span>GitHub</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DASHBOARD PREVIEW ============================== -->
+  <section id="dashboard" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Dashboard preview</span>
+        <h2>The control panel, live</h2>
+        <p>The real dashboard is served locally by the ESP32 at <strong>192.168.4.1</strong>. The panel below is a simulated preview so you can see the layout without connecting to the device.</p>
+      </div>
+
+      <div class="dash-frame glass reveal">
+        <div class="dash-topbar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <h4>BlueCycle Smart Pond Control Panel</h4>
+          <div class="ip">IP: 192.168.4.1</div>
+        </div>
+        <div class="dash-body">
+          <div class="dash-mode-row">
+            <span class="mode-chip active" id="chip-demo">Demo Mode</span>
+            <span class="mode-chip" id="chip-real">Real Sensor Mode</span>
+            <span class="mode-chip" id="chip-auto">Auto Mode</span>
+            <span class="mode-chip" id="chip-manual">Manual Mode</span>
+          </div>
+          <div class="dash-cards">
+            <div class="dcard"><div class="dc-top"><span class="dc-label">Temperature</span><span class="pill pill-ok" id="badge-temp">SAFE</span></div><div class="dc-val"><span id="val-temp">26.5</span><span class="dc-unit">°C</span></div></div>
+            <div class="dcard"><div class="dc-top"><span class="dc-label">pH Level</span><span class="pill pill-ok" id="badge-ph">SAFE</span></div><div class="dc-val"><span id="val-ph">7.00</span><span class="dc-unit">pH</span></div></div>
+            <div class="dcard"><div class="dc-top"><span class="dc-label">Turbidity</span><span class="pill pill-ok" id="badge-turb">CLEAN</span></div><div class="dc-val"><span id="val-turb">180</span><span class="dc-unit">raw</span></div></div>
+            <div class="dcard"><div class="dc-top"><span class="dc-label">Water Level</span><span class="pill pill-ok" id="badge-level">SAFE</span></div><div class="dc-val"><span id="val-level">15.0</span><span class="dc-unit">cm</span></div></div>
+          </div>
+          <div class="dash-pumps">
+            <div class="pump-row"><span>Acid Pump</span><span class="toggle-dot" id="pump-acid"></span></div>
+            <div class="pump-row"><span>Base Pump</span><span class="toggle-dot" id="pump-base"></span></div>
+            <div class="pump-row"><span>Air Pump</span><span class="toggle-dot" id="pump-air"></span></div>
+            <div class="pump-row"><span>Water Pump</span><span class="toggle-dot" id="pump-water"></span></div>
+          </div>
+          <p class="dash-note">Values shown are a simulated live preview, refreshing every few seconds — just like the real ESP32 dashboard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== VIDEO DEMO ============================== -->
+  <section id="demo" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Video demo</span>
+        <h2>See BlueCycle in action</h2>
+      </div>
+      <div class="video-frame reveal">
+        <iframe src="https://www.youtube.com/embed/Rc953pN2lYY" title="BlueCycle Smart Pond System — YouTube Demonstration" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== REAL-LIFE APPLICATIONS ============================== -->
+  <section id="applications" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Real-life applications</span>
+        <h2>Where BlueCycle fits</h2>
+      </div>
+      <div class="apps-grid reveal reveal-stagger">
+        <div class="app-card glass" style="--i:0"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/></svg></div><div><h4>Fish ponds</h4><p>Continuous monitoring reduces manual checking and helps detect unsafe water earlier.</p></div></div>
+        <div class="app-card glass" style="--i:1"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></div><div><h4>Fish hatcheries</h4><p>Sensitive fry and hatchery tanks need a fast response to pH, temperature and water-quality change.</p></div></div>
+        <div class="app-card glass" style="--i:2"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><path d="M3 21h18M5 21V9l4-4 4 4v12M13 21V13l3-2 3 2v8"/></svg></div><div><h4>Commercial aquaculture farms</h4><p>Automation reduces labour and supports more consistent pond care across many tanks.</p></div></div>
+        <div class="app-card glass" style="--i:3"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><rect x="5" y="7" width="14" height="12" rx="2"/><path d="M9 3v4M15 3v4"/></svg></div><div><h4>Research water tanks</h4><p>A useful academic and experimental platform for water-quality control studies.</p></div></div>
+        <div class="app-card glass" style="--i:4"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div><div><h4>Smart aquarium systems</h4><p>Can be adapted into a smaller indoor water-monitoring system for home or lab aquariums.</p></div></div>
+        <div class="app-card glass" style="--i:5"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#04241c" stroke-width="2"><path d="M4 19V7l8-4 8 4v12M4 19h16M9 19v-6h6v6"/></svg></div><div><h4>Educational institutions</h4><p>A hands-on demonstration platform for IoT, embedded systems and aquaculture coursework.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== COST BREAKDOWN ============================== -->
+  <section id="cost" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Cost breakdown</span>
+        <h2>What the prototype actually cost</h2>
+        <p>Approximate cost of the final prototype's components, in Bangladeshi Taka (৳). Prices may vary by vendor and availability.</p>
+      </div>
+      <div class="cost-wrap glass reveal">
+        <div class="cost-scroll">
+          <table class="cost-table">
+            <thead><tr><th>SL</th><th>Component</th><th>Price (BDT)</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Turbidity Sensor — Suspended Turbidity Detection Module Kit</td><td>1,300</td></tr>
+              <tr><td>2</td><td>pH Sensor Analog Meter Kit for Arduino</td><td>2,000</td></tr>
+              <tr><td>3</td><td>6V Mini Air Pump Motor</td><td>500</td></tr>
+              <tr><td>4</td><td>Sunford 3000mAh 3.7V 18650 Battery × 3</td><td>1,000</td></tr>
+              <tr><td>5</td><td>18650 Battery Holder 3S with wire</td><td>25</td></tr>
+              <tr><td>6</td><td>3S 12.6V Type-C Lithium Battery Charging Board 2A</td><td>100</td></tr>
+              <tr><td>7</td><td>Ultrasonic Sonar Sensor HC-SR04</td><td>80</td></tr>
+              <tr><td>8</td><td>Servo Motor Micro MG90S 360° Continuous Rotation</td><td>150</td></tr>
+              <tr><td>9</td><td>Passive Buzzer 5V</td><td>8</td></tr>
+              <tr><td>10</td><td>ESP32-S ESP-WROOM-32 Dev Board 38P NodeMCU</td><td>450</td></tr>
+              <tr><td>11</td><td>Cable, Arduino Leonardo/DUE USB A to Micro B 30cm</td><td>120</td></tr>
+              <tr><td>12</td><td>16×2 Serial LCD Module for Arduino, Assembled</td><td>250</td></tr>
+              <tr><td>13</td><td>Breadboard Full Size Bare, 830 Tie Points</td><td>250</td></tr>
+              <tr><td>14</td><td>Male-to-Female Jumper Wires, 20 pcs, 20cm</td><td>25</td></tr>
+              <tr><td>15</td><td>Jumper Wire Single 30cm, Male-to-Male</td><td>30</td></tr>
+              <tr><td>16</td><td>Female-to-Female Jumper Wires, 20 pcs, 20cm</td><td>20</td></tr>
+              <tr><td>17</td><td>LM2596 DC-DC Buck Converter Step-Down Module</td><td>50</td></tr>
+              <tr><td>18</td><td>Rocker Switch ON/OFF KCD1-101, 2-pin</td><td>8</td></tr>
+              <tr><td>19</td><td>4-Channel Relay Module with Optocoupler Isolation</td><td>300</td></tr>
+              <tr><td>20</td><td>Small Peristaltic Dosing Pump 12V, Silicone Tubing</td><td>650</td></tr>
+              <tr><td>21</td><td>Male-to-Male Jumper Wires, 20 pcs, 20cm</td><td>15</td></tr>
+              <tr><td>22</td><td>Male-to-Female Jumper Wires, 20 pcs, 20cm</td><td>15</td></tr>
+              <tr><td>23</td><td>Female-to-Female Jumper Wires, 20 pcs, 20cm</td><td>15</td></tr>
+              <tr><td>24</td><td>DC 4–30V Voltmeter LED Display Panel</td><td>15</td></tr>
+              <tr><td>25</td><td>Resistor Collection, 10 pcs — 10K</td><td>40</td></tr>
+              <tr><td>26</td><td>Resistor Collection, 10 pcs — 22K</td><td>40</td></tr>
+              <tr><td>27</td><td>Breadboard / Project Board, 400 Tie Points</td><td>30</td></tr>
+              <tr><td>28</td><td>1 Meter Transparent Water Pipe for Mini Water Pump</td><td>15</td></tr>
+              <tr><td>29</td><td>DC-DC Buck Converter Module 3A Adjustable LM2596</td><td>30</td></tr>
+              <tr><td>30</td><td>Mini Solder Wire 0.8mm, Approx. 40g</td><td>60</td></tr>
+              <tr><td>31</td><td>Baku Soldering Rosin Flux Paste BK-80, 80gm</td><td>20</td></tr>
+              <tr><td>32</td><td>DC 12V 3A High Pressure Diaphragm Water Pump, Self-Priming</td><td>350</td></tr>
+              <tr><td>33</td><td>DC-DC Buck Converter Module 3A Adjustable LM2596</td><td>20</td></tr>
+            </tbody>
+            <tfoot><tr><td></td><td>Total Project Cost</td><td>৳ 8,026</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CHALLENGES & SOLUTIONS ============================== -->
+  <section id="challenges" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Challenges faced</span>
+        <h2>What actually went wrong — and how it got fixed</h2>
+        <p>Ten real debugging stages from build to demo, drawn directly from the project's error log.</p>
+      </div>
+      <div class="challenge-list reveal">
+
+        <div class="challenge-row glass"><span class="chal-num">01</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>ESP32 board damaged/burned from unsafe power handling during pump testing.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Checked supply lines, used external power + buck converter, kept pumps off the ESP32 rail, shared common ground.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">02</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>pH readings were noisy and unstable when read directly on the ESP32.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Moved pH reading to a dedicated Arduino UNO and sent the value to ESP32 over I2C.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">03</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Wrong pH calibration — the probe was set up without a proper reference baseline.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Recalibrated against normal reference water and fixed the acid / safe / base logic.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">04</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Turbidity sensor constantly read "dirty," pinned near maximum.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Recalibrated the sensor baseline in normal pond water and adjusted the sensitivity range.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">05</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Ultrasonic sensor returned 0&nbsp;cm / no reading intermittently.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Rechecked TRIG/ECHO wiring and mounting, then added explicit no-reading handling in the dashboard.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">06</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Relay ON/OFF logic was confusing — active-HIGH behaviour wasn't obvious at first.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Bench-tested the relay module and fixed the relayOn / relayOff logic in code.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">07</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>360° servo spun continuously — its stop value didn't sit exactly at 90.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Added an adjustable stop value plus timed forward/reverse control.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">08</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Compile and library errors from mixed ESP32 / Arduino UNO board settings.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Split the ESP32 main code and Arduino UNO pH code apart, and selected the correct board per file.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">09</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Pumps needed more current than the ESP32 could safely supply directly.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Routed pumps through the relay module, powered from a separate battery / buck-converter rail.</p></div></div>
+        </div>
+
+        <div class="challenge-row glass"><span class="chal-num">10</span>
+          <div class="chal-problem"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg></div><div><h5>Problem</h5><p>Phones sometimes showed a stale cached dashboard or leftover demo values.</p></div></div>
+          <div class="chal-solution"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div><h5>Solved</h5><p>Added an explicit real-sensor mode, manual demo mode, and dashboard refresh logic.</p></div></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FUTURE SCOPE ============================== -->
+  <section id="future" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Future scope</span>
+        <h2>Where BlueCycle goes from here</h2>
+      </div>
+      <div class="future-grid reveal reveal-stagger">
+        <div class="future-card glass" style="--i:0"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></div><p>Waterproof industrial enclosure and connectors for real outdoor pond deployment.</p></div>
+        <div class="future-card glass" style="--i:1"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="2"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/></svg></div><p>Custom PCB with fuse, reverse-polarity and diode protection, and labelled power lines.</p></div>
+        <div class="future-card glass" style="--i:2"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></div><p>Laboratory-grade pH calibration using pH 4, pH 7 and pH 10 buffer solutions.</p></div>
+        <div class="future-card glass" style="--i:3"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 4 2"/></svg></div><p>Real NTU turbidity calibration recorded across multiple reference samples.</p></div>
+        <div class="future-card glass" style="--i:4"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v4M15 3v4M4 8h16M6 8v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8"/></svg></div><p>Dissolved oxygen, ammonia, TDS and EC sensors for fuller aquaculture monitoring.</p></div>
+        <div class="future-card glass" style="--i:5"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 17a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.7-1.6A4.5 4.5 0 0 1 18 17H6Z"/></svg></div><p>Cloud database, mobile app, long-term graphs and remote access beyond the local dashboard.</p></div>
+        <div class="future-card glass" style="--i:6"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><p>Real-time clock module for exact, dependable daily feeding schedules.</p></div>
+        <div class="future-card glass" style="--i:7"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></div><p>Solar power and battery management for unattended field deployment.</p></div>
+        <div class="future-card glass" style="--i:8"><div class="future-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h4l2-4 4 8 2-4h4"/></svg></div><p>AI / threshold prediction to flag risk trends before conditions turn dangerous.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== TEAM ============================== -->
+  <section id="team" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Team</span>
+        <h2>Group 2 — Dept. of CSE, UIU</h2>
+        <p>United International University, Dhaka, Bangladesh</p>
+      </div>
+      <div class="team-grid reveal reveal-stagger">
+        <div class="team-card glass" style="--i:0"><div class="avatar">NH</div><h4>Nahid Hasan</h4><div class="tid">ID 0112320269</div><span class="role">Group 2 · CSE, UIU</span></div>
+        <div class="team-card glass" style="--i:1"><div class="avatar">AS</div><h4>Adeeb Sharar</h4><div class="tid">ID 0112430108</div><span class="role">Group 2 · CSE, UIU</span></div>
+        <div class="team-card glass" style="--i:2"><div class="avatar">FL</div><h4>Farhan Labib</h4><div class="tid">ID 0112430119</div><span class="role">Group 2 · CSE, UIU</span></div>
+        <div class="team-card glass" style="--i:3"><div class="avatar">TR</div><h4>Tanvir Rifat</h4><div class="tid">ID 0112430691</div><span class="role">Group 2 · CSE, UIU</span></div>
+        <div class="team-card glass" style="--i:4"><div class="avatar">SJ</div><h4>Sakila Anjum Jinat</h4><div class="tid">ID 0112430515</div><span class="role">Group 2 · CSE, UIU</span></div>
+      </div>
+
+      <!-- SUPERVISOR -->
+      <div class="supervisor-card glass reveal">
+        <div class="avatar">SV</div>
+        <div class="sup-info">
+          <span>Project Supervisor</span>
+          <h4>Supervisor Name Placeholder</h4>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== GALLERY ============================== -->
+  <section id="gallery" class="section">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Project gallery</span>
+        <h2>Build photos &amp; moments</h2>
+      </div>
+      <div class="gallery-grid reveal reveal-stagger">
+        <div class="g-item" style="--i:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Completed Prototype</span></div>
+        <div class="g-item" style="--i:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Sensor Wiring</span></div>
+        <div class="g-item" style="--i:2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Relay &amp; Pump Assembly</span></div>
+        <div class="g-item" style="--i:3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Dashboard Screenshot</span></div>
+        <div class="g-item" style="--i:4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Team at Project Show</span></div>
+        <div class="g-item" style="--i:5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-4 3"/></svg><span>Award Moment</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DOCUMENTATION ============================== -->
+  <section id="docs" class="section" style="background:var(--bg-alt);">
+    <div class="wrap">
+      <div class="head-block center">
+        <span class="eyebrow"><span class="dot"></span> Documentation</span>
+        <h2>Dig into the project</h2>
+      </div>
+      <div class="doc-grid reveal reveal-stagger">
+        <a href="https://github.com/Nahid0269/BlueCycle-Smart-Pond-Monitoring-System" target="_blank" rel="noopener" class="doc-card glass" style="--i:0">
+          <div class="doc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.08.78 2.17v3.22c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z" fill="#fff" stroke="none"/></svg></div>
+          <h5>GitHub Repository</h5>
+          <span class="soon">Full source code →</span>
+        </a>
+        <div class="doc-card glass btn-disabled" style="--i:1">
+          <div class="doc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></div>
+          <h5>Project Report</h5>
+          <span class="soon">Coming soon</span>
+        </div>
+        <div class="doc-card glass btn-disabled" style="--i:2">
+          <div class="doc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+          <h5>Presentation</h5>
+          <span class="soon">Coming soon</span>
+        </div>
+        <div class="doc-card glass btn-disabled" style="--i:3">
+          <div class="doc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1.5 1-1.5 2.2M12 17h.01"/></svg></div>
+          <h5>Full Documentation</h5>
+          <span class="soon">Coming soon</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FOOTER ============================== -->
+  <footer>
+    <div class="wrap">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#hero" class="brand">
+            <span class="brand-mark">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 15c2 2 4 2 6 0s4-2 6 0 4 2 6 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="3" stroke="#fff" stroke-width="2"/></svg>
+            </span>
+            BlueCycle
+          </a>
+          <p>Smart Pond Monitoring &amp; Automatic Water Quality Management System — an IoT prototype built for smart aquaculture.</p>
+          <div class="footer-social">
+            <a href="https://github.com/Nahid0269/BlueCycle-Smart-Pond-Monitoring-System" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.08.78 2.17v3.22c0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12c0-6.27-5.23-11.5-11.5-11.5Z"/></svg></a>
+            <a href="https://www.youtube.com/embed/Rc953pN2lYY" target="_blank" rel="noopener" aria-label="YouTube demo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12s0-3.2-.4-4.7a3 3 0 0 0-2.1-2.1C17.9 4.7 12 4.7 12 4.7s-5.9 0-7.5.5A3 3 0 0 0 2.4 7.3C2 8.8 2 12 2 12s0 3.2.4 4.7a3 3 0 0 0 2.1 2.1c1.6.5 7.5.5 7.5.5s5.9 0 7.5-.5a3 3 0 0 0 2.1-2.1C22 15.2 22 12 22 12Z"/><path d="M10 15.2 15.5 12 10 8.8v6.4Z" fill="var(--primary)"/></svg></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h5>Institution</h5>
+          <ul>
+            <li><span>United International University</span></li>
+            <li><span>Dept. of Computer Science &amp; Engineering</span></li>
+            <li><span>Supervisor: Placeholder</span></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>Project</h5>
+          <ul>
+            <li><a href="#about">About BlueCycle</a></li>
+            <li><a href="#workflow">System workflow</a></li>
+            <li><a href="#hardware">Hardware &amp; software</a></li>
+            <li><a href="#cost">Cost breakdown</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>Contact</h5>
+          <ul>
+            <li><a href="https://github.com/Nahid0269/BlueCycle-Smart-Pond-Monitoring-System" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><span>Email: add contact email here</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 BlueCycle — Group 2, Dept. of CSE, United International University.</p>
+        <p>Built for the university Project Show.</p>
+      </div>
+    </div>
+  </footer>
+
+  <button id="back-to-top" aria-label="Back to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+<script>
+/* ============================================================================
+   BLUECYCLE — INTERACTION LAYER
+   Sections: 1. Loader  2. Theme toggle  3. Navbar + mobile menu  4. Scroll
+   progress  5. Cursor glow  6. Smooth scroll  7. Reveal-on-scroll  8. Counters
+   9. Telemetry marquee  10. Ripple buttons  11. Dashboard simulation
+   12. Back-to-top
+============================================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- 1. LOADER ---------- */
+  window.addEventListener('load', function(){
+    var loader = document.getElementById('loader');
+    setTimeout(function(){ loader.classList.add('hide'); }, 650);
+  });
+
+  /* ---------- 2. THEME TOGGLE ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  var savedTheme = null;
+  try{ savedTheme = null; }catch(e){}
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+  });
+
+  /* ---------- 3. NAVBAR + MOBILE MENU ---------- */
+  var navbar = document.getElementById('navbar');
+  var mobileMenu = document.getElementById('mobile-menu');
+  var navToggle = document.getElementById('nav-toggle');
+  function onScroll(){
+    if(window.scrollY > 40){ navbar.classList.add('scrolled'); } else { navbar.classList.remove('scrolled'); }
+  }
+  window.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+
+  navToggle.addEventListener('click', function(){
+    var open = mobileMenu.style.display === 'flex';
+    mobileMenu.style.display = open ? 'none' : 'flex';
+  });
+  mobileMenu.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ mobileMenu.style.display = 'none'; });
+  });
+
+  /* ---------- 4. SCROLL PROGRESS ---------- */
+  var progress = document.getElementById('scroll-progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive:true }); updateProgress();
+
+  /* ---------- 5. CURSOR GLOW ---------- */
+  var glow = document.getElementById('cursor-glow');
+  if(window.matchMedia && window.matchMedia('(hover:hover)').matches){
+    window.addEventListener('mousemove', function(e){
+      glow.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+    }, { passive:true });
+  }
+
+  /* ---------- 6. SMOOTH SCROLL (anchor links) ---------- */
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var id = a.getAttribute('href');
+      if(id.length < 2) return;
+      var target = document.querySelector(id);
+      if(target){
+        e.preventDefault();
+        var y = target.getBoundingClientRect().top + window.pageYOffset - 64;
+        window.scrollTo({ top:y, behavior:'smooth' });
+      }
+    });
+  });
+
+  /* ---------- 7. REVEAL ON SCROLL ---------- */
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold:0.12, rootMargin:'0px 0px -60px 0px' });
+  revealEls.forEach(function(el){ io.observe(el); });
+
+  /* ---------- 8. ANIMATED COUNTERS ---------- */
+  var counters = document.querySelectorAll('.stat-num');
+  var counted = false;
+  function runCounters(){
+    if(counted) return; counted = true;
+    counters.forEach(function(el){
+      var target = parseFloat(el.getAttribute('data-count')) || 0;
+      var prefix = el.getAttribute('data-prefix') || '';
+      var suffix = el.getAttribute('data-suffix') || '';
+      var start = 0;
+      var duration = 1400;
+      var startTime = null;
+      function step(ts){
+        if(!startTime) startTime = ts;
+        var progressT = Math.min((ts - startTime) / duration, 1);
+        var eased = 1 - Math.pow(1 - progressT, 3);
+        var val = Math.floor(eased * target);
+        el.textContent = prefix + val.toLocaleString() + suffix;
+        if(progressT < 1){ requestAnimationFrame(step); }
+        else{ el.textContent = prefix + target.toLocaleString() + suffix; }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+  var statsBlock = document.querySelector('.hero-stats');
+  if(statsBlock){
+    var statsIO = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ runCounters(); statsIO.disconnect(); } });
+    }, { threshold:0.4 });
+    statsIO.observe(statsBlock);
+  }
+
+  /* ---------- 9. TELEMETRY MARQUEE ---------- */
+  var track = document.getElementById('telemetry-track');
+  if(track){
+    var readings = [
+      'pH <b>7.10</b>', 'TEMP <b>26.8°C</b>', 'TURBIDITY <b>190</b>', 'LEVEL <b>15.1cm</b>',
+      'AUTO MODE <b>ON</b>', 'RELAY <b>4-CH</b>', 'WIFI <b>BlueCycle_Demo</b>', 'STATUS <b>SAFE</b>'
+    ];
+    var html = readings.map(function(r){ return '<span>● ' + r + '</span>'; }).join('');
+    track.innerHTML = html + html; // duplicate for seamless marquee loop
+  }
+
+  /* ---------- 10. RIPPLE ON BUTTONS ---------- */
+  document.querySelectorAll('.btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      var rect = btn.getBoundingClientRect();
+      var ripple = document.createElement('span');
+      var size = Math.max(rect.width, rect.height);
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+      btn.appendChild(ripple);
+      setTimeout(function(){ ripple.remove(); }, 650);
+    });
+  });
+
+  /* ---------- 11. SIMULATED LIVE DASHBOARD ---------- */
+  var dash = {
+    temp: 26.5, ph: 7.00, turb: 180, level: 15.0,
+    els: {
+      temp: document.getElementById('val-temp'), ph: document.getElementById('val-ph'),
+      turb: document.getElementById('val-turb'), level: document.getElementById('val-level'),
+      bTemp: document.getElementById('badge-temp'), bPh: document.getElementById('badge-ph'),
+      bTurb: document.getElementById('badge-turb'), bLevel: document.getElementById('badge-level'),
+      pAcid: document.getElementById('pump-acid'), pBase: document.getElementById('pump-base'),
+      pAir: document.getElementById('pump-air'), pWater: document.getElementById('pump-water')
+    }
+  };
+  function setBadge(el, text, ok){
+    if(!el) return;
+    el.textContent = text;
+    el.className = 'pill ' + (ok ? 'pill-ok' : 'pill-warn');
+  }
+  function toggle(el, on){ if(!el) return; el.classList.toggle('on', on); }
+  function tickDashboard(){
+    if(!dash.els.temp) return;
+    // gentle random walk within realistic prototype ranges
+    dash.temp = Math.max(22, Math.min(34, dash.temp + (Math.random()-0.5)*0.8));
+    dash.ph = Math.max(5.8, Math.min(9.2, dash.ph + (Math.random()-0.5)*0.25));
+    dash.turb = Math.max(120, Math.min(620, dash.turb + (Math.random()-0.5)*40));
+    dash.level = Math.max(12.5, Math.min(18, dash.level + (Math.random()-0.5)*0.6));
+
+    dash.els.temp.textContent = dash.temp.toFixed(1);
+    dash.els.ph.textContent = dash.ph.toFixed(2);
+    dash.els.turb.textContent = Math.round(dash.turb);
+    dash.els.level.textContent = dash.level.toFixed(1);
+
+    var tempOk = dash.temp >= 18 && dash.temp <= 32;
+    var phOk = dash.ph >= 6.5 && dash.ph <= 8.5;
+    var turbOk = dash.turb <= 550;
+    var levelOk = dash.level >= 14 && dash.level <= 16;
+
+    setBadge(dash.els.bTemp, tempOk ? 'SAFE' : 'ALERT', tempOk);
+    setBadge(dash.els.bPh, phOk ? 'SAFE' : (dash.ph < 6.5 ? 'ACIDIC' : 'BASIC'), phOk);
+    setBadge(dash.els.bTurb, turbOk ? 'CLEAN' : 'DIRTY', turbOk);
+    setBadge(dash.els.bLevel, levelOk ? 'SAFE' : (dash.level > 16 ? 'UNDERFLOW' : 'OVERFLOW'), levelOk);
+
+    toggle(dash.els.pAir, !tempOk);
+    toggle(dash.els.pAcid, dash.ph > 8.5);
+    toggle(dash.els.pBase, dash.ph < 6.5);
+    toggle(dash.els.pWater, dash.level > 16);
+  }
+  setInterval(tickDashboard, 2600);
+
+  var chipDemo = document.getElementById('chip-demo'), chipReal = document.getElementById('chip-real');
+  var chipAuto = document.getElementById('chip-auto'), chipManual = document.getElementById('chip-manual');
+  function setActiveChip(list, active){ list.forEach(function(c){ c.classList.toggle('active', c === active); }); }
+  if(chipDemo && chipReal){
+    chipDemo.addEventListener('click', function(){ setActiveChip([chipDemo, chipReal], chipDemo); });
+    chipReal.addEventListener('click', function(){ setActiveChip([chipDemo, chipReal], chipReal); });
+  }
+  if(chipAuto && chipManual){
+    chipAuto.classList.add('active');
+    chipAuto.addEventListener('click', function(){ setActiveChip([chipAuto, chipManual], chipAuto); });
+    chipManual.addEventListener('click', function(){ setActiveChip([chipAuto, chipManual], chipManual); });
+  }
+
+  /* ---------- 12. BACK TO TOP ---------- */
+  var backBtn = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function(){
+    backBtn.classList.toggle('show', window.scrollY > 700);
+  }, { passive:true });
+  backBtn.addEventListener('click', function(){
+    window.scrollTo({ top:0, behavior:'smooth' });
+  });
+
+})();
+</script>
+</body>
+</html>
